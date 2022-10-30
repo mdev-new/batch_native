@@ -58,6 +58,6 @@ DWORD Process() {
 }
 
 int APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-	if (dwReason == DLL_PROCESS_ATTACH) CreateThread(0,0,(LPTHREAD_START_ROUTINE)Process,0,0,0);
+	if (dwReason == DLL_PROCESS_ATTACH) CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)Process,NULL,0,NULL);
 	return TRUE;
 }

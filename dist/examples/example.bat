@@ -13,7 +13,7 @@ if "%1" NEQ "nohook" (
 
   ..\getinput.exe
   if !errorlevel! NEQ 0 (
-    echo error while hooking into cmd
+    echo error while hooking into cmd %errorlevel%
     pause
     exit /b
   )
