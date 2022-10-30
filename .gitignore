@@ -1,0 +1,5 @@
+bin/
+dist/*.zip
+dist/*.exe
+src/extern/*.o
+src/extern/*.obj
