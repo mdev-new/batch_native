@@ -7,6 +7,7 @@
 #include <winternl.h>
 #include <psapi.h>
 #include "../bin/dllcode.h"
+#include "extern/lz77.c"
 
 // This is extremely ugly
 // However its a) not mine and b) not getting edited again soon
@@ -14,6 +15,8 @@
 // I somehow ported it to x64 and it works
 
 typedef unsigned __int64 QWORD;
+
+char unpackmem_getinput[2556] = {0};
 
 typedef struct {
     PBYTE imageBase;
@@ -98,6 +101,13 @@ void HookDll(HANDLE hProcess, LPVOID dllcode) {
     VirtualFreeEx(hProcess, loaderMemory, 0, MEM_RELEASE);
 }
 
+CHAR b[21], *c;
+PCHAR itoa_(i,x) {
+  c=b+21,x=abs(i);
+  do *--c = 48 + x % 10; while(x/=10); if(i<0) *--c = 45;
+  return c;
+}
+
 // TODO error checking
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nShowCmd) {
 	PROCESS_BASIC_INFORMATION ProcessInfo;
@@ -113,8 +123,20 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return -2;
 	}
 
-	HookDll(hProcess, getinput_dll_code);
-	HookDll(hProcess, discord_dll_code);
+	//char *unpackmem_getinput = LocalAlloc(2556, LPTR);
+	//char *unpackmem_discord = LocalAlloc(264772, LPTR);
 
+	//MessageBox(NULL, "Here", "Here", MB_OK);
+	lz77_decompress(getinput_dll_code, 1648, unpackmem_getinput, 2556);
+	//WriteFile(CreateFile("test.bin", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL), unpackmem_getinput, 2556, NULL, NULL);
+	//MessageBox(NULL, "Here", "Here", MB_OK);
+	//lz77_decompress(discord_dll_code, 132075, unpackmem_discord, 264772);
+	//MessageBox(NULL, "Here", "Here", MB_OK);
+
+	HookDll(hProcess, unpackmem_getinput);
+	//HookDll(hProcess, (LPVOID)unpackmem_discord);
+
+	//LocalFree(unpackmem_getinput);
+	//LocalFree(unpackmem_discord);
     return 0;
 }

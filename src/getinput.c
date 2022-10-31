@@ -114,7 +114,9 @@ DWORD CALLBACK Process(void *data) {
 }
 
 BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-  if (dwReason == DLL_PROCESS_ATTACH)
+  if (dwReason == DLL_PROCESS_ATTACH) {
+	DisableThreadLibraryCalls(hInst);
     CloseHandle(CreateThreadS(Process));
+  }
   return TRUE;
 }

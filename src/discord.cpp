@@ -1,3 +1,5 @@
+#undef UNICODE
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +10,9 @@
 #include "discord_rpc.h"
 
 #include <Windows.h>
+#include <mutex>
+
+LONG_PTR origWndProc;
 
 char *readenv(const char *name) {
 	static TCHAR buffer[32];
@@ -15,9 +20,23 @@ char *readenv(const char *name) {
 	return strdup(buffer); // memory leaks go brr
 }
 
-DWORD Process() {
-	if(GetEnvironmentVariable("discordappid", NULL, 0) == 0) return -1;
+volatile BOOL shouldShutdown = FALSE;
+std::mutex m;
 
+BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
+	if(dwCtrlType >= 1 && dwCtrlType <= 6) {
+		m.lock();
+		shouldShutdown = TRUE;
+		m.unlock();
+		Sleep(550); // possibly let the last loop run
+	}
+	return TRUE;
+}
+
+DWORD Process() {
+	SetConsoleCtrlHandler(ConsoleCloseHandler, TRUE);
+
+	if(GetEnvironmentVariable("discordappid", NULL, 0) == 0) return -1;
     DiscordEventHandlers handlers;
 	memset(&handlers, 0, sizeof(handlers));
 	Discord_Initialize(readenv("discordappid"), &handlers, 1, NULL);
@@ -34,7 +53,6 @@ DWORD Process() {
 	discordPresence.smallImageText = readenv("discordsmallimgtxt");
 	discordPresence.instance = 1;
 	Discord_UpdatePresence(&discordPresence);
-	Discord_UpdateConnection();
 
     while(1) {
 		if (GetEnvironmentVariable("discordupdate", NULL, 0)) {
@@ -48,6 +66,10 @@ DWORD Process() {
 			Discord_UpdatePresence(&discordPresence);
 		}
 
+		m.lock();
+		if(shouldShutdown == TRUE) break;
+		m.unlock();
+
 		Discord_UpdateConnection();
 		Sleep(500);
 	}
@@ -58,6 +80,9 @@ DWORD Process() {
 }
 
 int APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-	if (dwReason == DLL_PROCESS_ATTACH) CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)Process,NULL,0,NULL);
+	if (dwReason == DLL_PROCESS_ATTACH) {
+		//DisableThreadLibraryCalls(hInst);
+		CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)Process,NULL,0,NULL);
+	}
 	return TRUE;
 }
