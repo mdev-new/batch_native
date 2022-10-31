@@ -11,7 +11,7 @@ title example
 if "%1" NEQ "nohook" (
   set /a mousexpos=mouseypos=keypressed=0
 
-  ..\getinput.exe
+  ..\batch_native.exe
   if !errorlevel! NEQ 0 (
     echo error while hooking into cmd %errorlevel%
     pause
