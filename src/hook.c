@@ -99,6 +99,13 @@ void HookDll(HANDLE hProcess, LPVOID dllcode) {
     VirtualFreeEx(hProcess, loaderMemory, 0, MEM_RELEASE);
 }
 
+VOID UncompressAndHook(HANDLE hProcess, HANDLE hProcHeap, LPVOID compressedDllCode, int compressedSize, int realSize) {
+	char *buffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
+	lz77_decompress(compressedDllCode, compressedSize, buffer, realSize+1);
+	HookDll(hProcess, buffer);
+	HeapFree(hProcHeap, 0, buffer);
+}
+
 // TODO error checking
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nShowCmd) {
 	PROCESS_BASIC_INFORMATION ProcessInfo;
@@ -114,17 +121,19 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return -2;
 	}
 
+	int argc = 0;
+	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
 	HANDLE hProcHeap = GetProcessHeap();
-	char *unpackmem_getinput = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, getinput_real_size+2);
-	char *unpackmem_discord = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, discord_real_size+2);
 
-	lz77_decompress(getinput_dll_code, getinput_size, unpackmem_getinput, getinput_real_size+1);
-	lz77_decompress(discord_dll_code, discord_size, unpackmem_discord, discord_real_size+1);
+	for (int i = 1; i <= argc; i++) {
+		switch(argv[i][0]) {
+		case 'i': UncompressAndHook(hProcess, hProcHeap, getinput_dll_code, getinput_size, getinput_real_size); break;
+		case 'd': UncompressAndHook(hProcess, hProcHeap, discord_dll_code, discord_size, discord_real_size); break;
+		default: break;
+		}
+	}
 
-	HookDll(hProcess, unpackmem_getinput);
-	HookDll(hProcess, unpackmem_discord);
-
-	HeapFree(hProcHeap, 0, unpackmem_getinput);
-	HeapFree(hProcHeap, 0, unpackmem_discord);
+	CloseHandle(hProcHeap);
     return 0;
 }

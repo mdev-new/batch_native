@@ -17,7 +17,7 @@ set discordlargeimg=canary-large
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
-..\batch_native.exe
+..\batch_native.exe i d
 
 set sprite_unselected_line1=xxxxxxxx
 set sprite_unselected_line2=xoooooox
