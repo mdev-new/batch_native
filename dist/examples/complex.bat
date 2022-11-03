@@ -10,7 +10,7 @@ mode 80,33
 <nul set /p=[?25l
 
 set /a mousexpos=mouseypos=keypressed=lastkey=0
-set discordappid=1035630279416610856
+:: set discordappid=1035630279416610856
 set discordstate=Hello world
 set discorddetails=Test
 set discordlargeimg=canary-large
@@ -62,10 +62,16 @@ for /l %%a in (97,1,122) do (
 	set /a index+=1
 )
 
+if "%keypressed%"=="32" (
+	set keypressed=0
+	<nul set /p=[2;%chridx%H 
+	set /a chridx+=1
+)
+
 if "%keypressed%"=="8" (
 	set keypressed=0
 	<nul set /p=[2;%chridx%H 
-	if %chridx% geq 12 set /a chridx=%chridx%-1
+	if %chridx% geq 12 set /a chridx-=1
 )
 
 goto :main

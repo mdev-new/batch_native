@@ -36,7 +36,6 @@ BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 DWORD Process() {
 	SetConsoleCtrlHandler(ConsoleCloseHandler, TRUE);
 
-	if(GetEnvironmentVariable("discordappid", NULL, 0) == 0) return -1;
     DiscordEventHandlers handlers;
 	memset(&handlers, 0, sizeof(handlers));
 	Discord_Initialize(readenv("discordappid"), &handlers, 1, NULL);

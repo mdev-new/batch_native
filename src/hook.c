@@ -129,7 +129,10 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	for (int i = 1; i <= argc; i++) {
 		switch(argv[i][0]) {
 		case 'i': UncompressAndHook(hProcess, hProcHeap, getinput_dll_code, getinput_size, getinput_real_size); break;
-		case 'd': UncompressAndHook(hProcess, hProcHeap, discord_dll_code, discord_size, discord_real_size); break;
+		case 'd': {
+			if(GetEnvironmentVariable("discordappid", NULL, 0) == 0) break; // dont even bother
+			UncompressAndHook(hProcess, hProcHeap, discord_dll_code, discord_size, discord_real_size);
+		} break;
 		default: break;
 		}
 	}
