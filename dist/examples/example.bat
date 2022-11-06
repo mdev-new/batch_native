@@ -11,7 +11,9 @@ title example
 if "%1" NEQ "nohook" (
   set /a mousexpos=mouseypos=keypressed=0
 
-  ..\batch_native.exe
+	for %%x in (getinput discord) do (
+		..\batch_native.exe ..\%%x.dll
+	)
   if !errorlevel! NEQ 0 (
     echo error while hooking into cmd %errorlevel%
     pause
