@@ -14,7 +14,7 @@
 */
 
 VOID HookDll(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
-  char *output = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, lstrlenW(name)+1);
+  char *output = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, lstrlenW(name)+2);
   WideCharToMultiByte(CP_ACP, 0, name, lstrlenW(name), output, lstrlenW(name)+1, NULL, NULL);
 
   LPVOID lpBaseAddress = VirtualAllocEx(hProcess, NULL, lstrlen(output), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -25,7 +25,7 @@ VOID HookDll(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-  TCHAR parentPath[MAX_PATH];
+  TCHAR parentPath[MAX_PATH] = {0};
 
   PROCESS_BASIC_INFORMATION ProcessInfo;
   if (!NT_SUCCESS(NtQueryInformationProcess(GetCurrentProcess(), ProcessBasicInformation, &ProcessInfo, sizeof(ProcessInfo), NULL)))

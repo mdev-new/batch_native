@@ -12,8 +12,6 @@
 #include <Windows.h>
 #include <mutex>
 
-LONG_PTR origWndProc;
-
 char *readenv(const char *name) {
 	static TCHAR buffer[127];
 	GetEnvironmentVariable(name, buffer, 127);
