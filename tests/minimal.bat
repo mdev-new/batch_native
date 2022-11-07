@@ -9,7 +9,7 @@ set discordlargeimg=canary-large
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
-for %%x in (getinput discord) do  ..\dist\batch_native.exe ..\%%x.dll
+for %%x in (getinput discord) do  ..\dist\batch_native.exe ..\dist\%%x.dll
 :a
 title %keypressed% %click% %mousexpos% %mouseypos% %wheeldelta%
 goto :a

@@ -11,7 +11,7 @@ title example
 if "%1" NEQ "nohook" (
   set /a mousexpos=mouseypos=keypressed=0
 
-	for %%x in (getinput discord) do ..\dist\batch_native.exe ..\%%x.dll
+	for %%x in (getinput discord) do ..\dist\batch_native.exe ..\dist\%%x.dll
   if !errorlevel! NEQ 0 (
     echo error while hooking into cmd %errorlevel%
     pause
@@ -23,13 +23,9 @@ set kblast=0
 
 for /f %%a in ('copy /Z "%~dpf0" nul') do set "CR=%%a"
 
-echo displaying only last key because batch/getinput is too fast
-echo format: kblast(emu) click mousx mousy
+echo format: keypressed click mousexpos mousypos wheeldelta
 echo.
 
-set kblast=0
-
 :a
-<nul set /p="!kblast!        !click!        !mousexpos!        !mouseypos!        !wheelDelta!        !CR!"
-if !keypressed! NEQ 0 set kblast=!keypressed! & set keypressed=0
+<nul set /p="!keypressed!        !click!        !mousexpos!        !mouseypos!        !wheelDelta!        !CR!"
 goto :a

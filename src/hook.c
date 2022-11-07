@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <winternl.h>
 #include <psapi.h>
+#include <shlwapi.h>
 
 /* return codes:
   -1: thread not created
@@ -41,15 +42,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
   HANDLE hProcHeap = GetProcessHeap();
 
-  int argc = 0;
+  int argc = 0, retcode = 0;
   LPCWSTR *args = CommandLineToArgvW(GetCommandLineW(), &argc);
-  //WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), args[1], lstrlenW(args[1]), NULL, NULL);
 
-  HookDll(hProcHeap, hProcess, args[1]);
+  if(argc > 0 && PathFileExistsW(args[1]))
+    HookDll(hProcHeap, hProcess, args[1]);
+  else retcode = -4;
 
   CloseHandle(hProcess);
   CloseHandle(hProcHeap);
 
-  // return 0 if no errors
-  return 0; // error checking on batch side
+  return retcode; // error checking on batch side
 }

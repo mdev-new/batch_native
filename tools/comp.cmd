@@ -9,6 +9,6 @@ g++ -shared -static-libgcc -static-libstdc++ -static -o dist\discord.dll src\dis
 strip --strip-unneeded -s -R .comment -R .gnu.version -R .note %TEMP%\getinput.dll
 strip --strip-unneeded -s -R .comment -R .gnu.version -R .note %TEMP%\discord.dll
 
-gcc -o dist\batch_native.exe src\hook.c -Isrc -Ibin -std=gnu99 -m64 -mconsole -Os -flto -fno-pic -fno-pie -fno-plt -fvisibility=hidden -fcompare-debug-second -fno-exceptions -fno-stack-protector -fno-math-errno -fno-ident -fno-asynchronous-unwind-tables -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-s,-e,WinMain,--gc-sections,--reduce-memory-overheads,--no-seh,--disable-reloc-section,--build-id=none -lntdll -lkernel32 -luser32 -lpsapi -lshell32
+gcc -o dist\batch_native.exe src\hook.c -Isrc -Ibin -std=gnu99 -m64 -mconsole -Os -flto -fno-pic -fno-pie -fno-plt -fvisibility=hidden -fcompare-debug-second -fno-exceptions -fno-stack-protector -fno-math-errno -fno-ident -fno-asynchronous-unwind-tables -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-s,-e,WinMain,--gc-sections,--reduce-memory-overheads,--no-seh,--disable-reloc-section,--build-id=none -lntdll -lkernel32 -luser32 -lpsapi -lshlwapi -lshell32
 
 strip --strip-unneeded -s -R .comment -R .gnu.version dist\batch_native.exe
