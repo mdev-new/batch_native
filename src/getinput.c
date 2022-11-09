@@ -26,6 +26,12 @@ const int UPS = 145; // Input polls per second
 const int WAIT_TIME = 1000 / UPS;
 signed wheelDelta; // this is NOT thread safe, at all.
 
+wchar_t *wcscpy(wchar_t * restrict s1, const wchar_t * restrict s2) {
+	wchar_t *cp = s1;
+	while ((*cp++ = *s2++) != L'\0');
+	return s1;
+}
+
 CHAR b[21], *c;
 PCHAR itoa_(i,x) {
   c=b+21,x=abs(i);
@@ -74,8 +80,15 @@ DWORD CALLBACK Process(void *data) {
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
   MSG mouseMsg;
 
-  // HFONT hfont = CreateFont(-8, -8, 0, 0, 0, 0, 0, 0, OEM_CHARSET, OUT_DEVICE_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, "Terminal");
-  // SendMessage(hCon, WM_SETFONT, hfont, TRUE);
+	CONSOLE_FONT_INFOEX cfi;
+  cfi.cbSize = sizeof(cfi);
+  cfi.nFont = 0;
+  cfi.dwFontSize.X = 8;
+  cfi.dwFontSize.Y = 8;
+  cfi.FontFamily = FF_DONTCARE;
+  cfi.FontWeight = FW_NORMAL;
+  wcscpy(cfi.FaceName, L"Terminal"); // Any invalid face name will do
+  SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 
   while(TRUE) {
     SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);

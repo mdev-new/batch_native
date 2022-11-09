@@ -8,7 +8,7 @@ Last update: 11 November 2022
 === Table of contents ===
 => Features
 => New environment variables
-=> How to setup
+=> Example set-up
 => Notes
 => System requirements
 => Credits
