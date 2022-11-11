@@ -3,6 +3,7 @@ setlocal enabledelayedexpansion
 
 :: Licensed under conditions stated in
 :: the documentation you recieved with this software
+:: Parts of this stolen from yeshi (particularly the sprite drawing routines) and modified by me
 
 >nul chcp 65001
 mode 80,33

@@ -17,18 +17,19 @@ Last update: 11 November 2022
 === Features ===
 - Fast
 - Mouse and keyboard polling
+ - Multiple keys down at once support
 - Discord RPC
 - Easy to setup in existing or new projects
 - Small size (depending on chosen modules)
 
 === New environment variables ===
 --- GetInput ---
-(o) keypressed*
+(o) keyspressed*: is formatted like this: -keycode1-keycode2-keycode3-
 (o) click: left=1,right=2
 (o) wheeldelta: up=-1,down=1
 (o) mousexpos**
 (o) mouseypos**
-* doesnt get cleared by getinput, set some flag or clear it manually to know that it was processed
+* uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 ** measured in characters
 
 -- DiscordRpc ---
@@ -46,10 +47,10 @@ i=in,o=out
 === Example setup ===
 --- GetInput ---
 :: Reset the variables
-set /a mousexpos=mouseypos=keypressed=click=wheeldelta=0
-batch_native.exe getinput.dll
+set /a mousexpos=mouseypos=keyspressed=click=wheeldelta=0
+inject.exe getinput.dll
 
-:: Then you can use all the variables GetInput provides:
+:: Then you can use all the variables GetInput module provides:
 echo !mousexpos! !mouseypos!...
 
 --- Discord RPC ---
@@ -60,21 +61,15 @@ set discordlargeimg=big-img
 set discordlargeimgtxt=Large image text
 set discordsmallimg=small-img
 set discordsmallimgtxt=Small image Test
-batch_native.exe discord.dll
+inject.exe discord.dll
 
 === Notes ===
-batch_native.exe returns different values on:
+inject.exe returns different values on:
 - Sucessful hook: 0
 - Can't query parent process info: -3
 - Parent process isn't cmd.exe: -2
   - This also makes MessageBox telling you
 - Some random fuckup: Literally any other value
-
---- GetInput specific ---
-We don't support uppercase input
-=> Uppercase keycodes get lowercased
-- This is because getinput is mainly targetted for games
-- For text input use set /p
 
 === Minimum system requirements ===
 OS:  Windows Vista x64
@@ -93,14 +88,11 @@ By "Binaries" it is meant the files you recieved that are able to be executed
 on a computer and are not readable through regular text editor.
 
 You may not use, copy or modify or distribute any of the files you recieved
-with this software unless given writen permission from copyright holders. For
-permission, send an email to "mousiedeveloper312@gmail.com".
+with this software unless given writen permission from copyright holders.
 
 You may not disassemble, decompile or by any other means alter with the
-supplied Binaries.
-
-We do not and will not distribute any information regarding building the final
-Binaries distributed to you.
+supplied Binaries. We do not and will not distribute any information 
+regarding building the final Binaries distributed to you.
 
 We do reserve the right to alter this document at any time without any prior
 notice. You may not alter this statement.
