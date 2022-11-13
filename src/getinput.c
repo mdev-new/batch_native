@@ -22,9 +22,7 @@
 #define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
 #define InRange(x, b, t) (b < x && x < t)
 
-const int UPS = 150; // Input polls per second
-const int WAIT_TIME = 1000 / UPS;
-signed wheelDelta; // this is NOT thread safe, at all.
+signed wheelDelta = 0; // this is NOT thread safe, at all.
 
 wchar_t *wcscpy(wchar_t * restrict s1, const wchar_t * restrict s2) {
 	wchar_t *cp = s1;
@@ -51,7 +49,7 @@ BYTE conversion_table[] = {
 /* 7 */    0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
 /* 8 */    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
 /* 9 */    0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F,
-/* A */    -1  , -1  , -1  , -1  , -1  , -1  , 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, // don't send the right/left ctrl/shift/etc
+/* A */    -1  , -1  , -1  , -1  , -1  , -1  , 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, // don't send the right/left ctrl,shift,etc. instead just send the regular ones (VK_SHIFT, VK_CTRL, etc)
 /* B */    0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,
 /* C */    0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
 /* D */    0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,
@@ -65,8 +63,6 @@ char buffer[0x300] = {0};
 VOID process_keys() {
   int isAnyKeyDown = 0, actionHappened = 0;
   BOOL state = 0;
-
-  //static int numberOfTimesVarSet;
 
   for(int i = 3; i < 0x100; i++) {
     state = GetAsyncKeyState(i);
@@ -94,15 +90,13 @@ VOID process_keys() {
     }
   }
 
-  //numberOfTimesVarSet++;
-  //SetEnvironmentVariable("notimes",itoa_(numberOfTimesVarSet));
   SetEnvironmentVariable("keyspressed",buffer);
 }
 
-LRESULT MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+// todo wheel delta doesnt get reset when other mouse events dont happen, for example reset delta back to 0 you have to move the mouse
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   MSLLHOOKSTRUCT *info = (MSLLHOOKSTRUCT *)lParam;
   wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
-
   if (wheelDelta != 0) wheelDelta /= WHEEL_DELTA;
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
@@ -168,7 +162,7 @@ DWORD CALLBACK Process(void *data) {
       process_keys();
     }
 
-    PeekMessage(&mouseMsg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
+    PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
     Sleep(1000 / 45);
   }
 

@@ -11,6 +11,25 @@
 
 typedef unsigned __int64 QWORD;
 
+typedef enum {
+  ERROR_NOT_CMDEXE = -2,
+  ERROR_CANNOT_GET_PARENT_PROC = -3,
+  ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS = -4,
+  ERROR_CANNOT_OPEN_FILE = -5,
+  ERROR_EMPTY_FILE = -6,
+  ERROR_CANNOT_READ_FILE = -7,
+  ERROR_CANNOT_ALLOCATE = -8,
+  ERROR_CANNOT_FREE = -9,
+  ERROR_CANNOT_DECOMPRESS = -10,
+  ERROR_CANNOT_HOOK = -11,
+  ERROR_CANNOT_WRITE_PROCESS_MEM = -12,
+  ERROR_CANNOT_VIRTUAL_ALLOC = -13,
+  ERROR_CANNOT_VIRTUAL_FREE = -14,
+  ERROR_CANNOT_OPEN_PROCESS = -15,
+  ERROR_CANNOT_OPEN_HEAP = -15,
+  ERROR_CANNOT_GET_PARENT_PROC_PATH = -16,
+} ReturnCodes;
+
 typedef struct {
     PBYTE imageBase;
     HMODULE(WINAPI* loadLibraryA)(PCSTR);
@@ -18,6 +37,7 @@ typedef struct {
     VOID(WINAPI* rtlZeroMemory)(PVOID, SIZE_T);
 } LoaderData;
 
+// not even gonna attempt to error check that
 QWORD WINAPI loadLibrary(LoaderData* loaderData) {
     PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)(loaderData->imageBase + ((PIMAGE_DOS_HEADER)loaderData->imageBase)->e_lfanew);
     PIMAGE_BASE_RELOCATION relocation = (PIMAGE_BASE_RELOCATION)(loaderData->imageBase + ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
@@ -60,7 +80,7 @@ QWORD WINAPI loadLibrary(LoaderData* loaderData) {
             (loaderData->imageBase + ntHeaders->OptionalHeader.AddressOfEntryPoint))
             ((HMODULE)loaderData->imageBase, DLL_PROCESS_ATTACH, NULL);
 
-        loaderData->rtlZeroMemory(loaderData->imageBase + ntHeaders->OptionalHeader.AddressOfEntryPoint, 32);
+        //loaderData->rtlZeroMemory(loaderData->imageBase + ntHeaders->OptionalHeader.AddressOfEntryPoint, 32);
         loaderData->rtlZeroMemory(loaderData->imageBase, ntHeaders->OptionalHeader.SizeOfHeaders);
         return result;
     }
@@ -70,22 +90,19 @@ QWORD WINAPI loadLibrary(LoaderData* loaderData) {
 // only serves as a marker
 void stub(void) {}
 
-/* return codes:
-  -1: thread not created
-  -2: parent not cmd.exe
-  -3: cant query parent proc info
-*/
-
-void HookDll(HANDLE hProcess, LPVOID dllcode) {
+// todo error checking?
+INT HookDll(HANDLE hProcess, LPVOID dllcode) {
   PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)(dllcode + ((PIMAGE_DOS_HEADER)dllcode)->e_lfanew);
   PBYTE executableImage = VirtualAllocEx(hProcess, NULL, ntHeaders->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-  WriteProcessMemory(hProcess, executableImage, dllcode, ntHeaders->OptionalHeader.SizeOfHeaders, NULL);
+  if(executableImage == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
+  if(WriteProcessMemory(hProcess, executableImage, dllcode, ntHeaders->OptionalHeader.SizeOfHeaders, NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
 
   PIMAGE_SECTION_HEADER sectionHeaders = (PIMAGE_SECTION_HEADER)(ntHeaders + 1);
   for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
-      WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL);
+      if(WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
 
   LoaderData* loaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READ);
+  if(loaderMemory == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
 
   LoaderData loaderParams = {
     .imageBase = executableImage,
@@ -94,28 +111,34 @@ void HookDll(HANDLE hProcess, LPVOID dllcode) {
     .rtlZeroMemory = (VOID(NTAPI*)(PVOID, SIZE_T))GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlZeroMemory")
   };
 
-  WriteProcessMemory(hProcess, loaderMemory, &loaderParams, sizeof(LoaderData), NULL);
-  WriteProcessMemory(hProcess, loaderMemory + 1, loadLibrary, (QWORD)stub - (QWORD)loadLibrary, NULL);
+  if(WriteProcessMemory(hProcess, loaderMemory, &loaderParams, sizeof(LoaderData), NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
+  if(WriteProcessMemory(hProcess, loaderMemory + 1, loadLibrary, (QWORD)stub - (QWORD)loadLibrary, NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
   WaitForSingleObject(CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)(loaderMemory + 1), loaderMemory, 0, NULL), INFINITE);
-  VirtualFreeEx(hProcess, loaderMemory, 0, MEM_RELEASE);
+  if(!VirtualFreeEx(hProcess, loaderMemory, 0, MEM_RELEASE)) return ERROR_CANNOT_VIRTUAL_FREE;
 }
 
+// todo definitely error check
 INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
   HANDLE hFile = CreateFileW(name, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(hFile == NULL) return -1;
+  if(hFile == NULL) return ERROR_CANNOT_OPEN_FILE;
 
   DWORD fileSize = GetFileSize(hFile, NULL), numOfBytesRead = 0;
+  if(fileSize == 0) return ERROR_EMPTY_FILE;
 
   BYTE *buffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, fileSize);
-  ReadFile(hFile, buffer, fileSize, &numOfBytesRead, NULL);
+  if(!ReadFile(hFile, buffer, fileSize, &numOfBytesRead, NULL)) return ERROR_CANNOT_READ_FILE;
 
   DWORD realSize = *(DWORD *)(buffer+fileSize-4);
+  BYTE lz77_match_len_bits = *(BYTE *)(buffer+fileSize-5);
   BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
-  lz77_decompress(buffer, fileSize, decompBuffer, realSize+1);
-  HookDll(hProcess, decompBuffer);
+    if(decompBuffer == NULL) return ERROR_CANNOT_ALLOCATE;
 
-  HeapFree(hProcHeap, 0, buffer);
+  int decomp = lz77_decompress(buffer, fileSize, decompBuffer, realSize+1, lz77_match_len_bits);
+  int retcode = HookDll(hProcess, decompBuffer);
+
+  if(HeapFree(hProcHeap, 0, buffer) == 0) return ERROR_CANNOT_FREE;
   CloseHandle(hFile);
+  return -((decomp == 0) + retcode);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
@@ -123,24 +146,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
   PROCESS_BASIC_INFORMATION ProcessInfo;
   if (!NT_SUCCESS(NtQueryInformationProcess(GetCurrentProcess(), ProcessBasicInformation, &ProcessInfo, sizeof(ProcessInfo), NULL)))
-    return -3;
+    return ERROR_CANNOT_GET_PARENT_PROC;
 
   HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, ProcessInfo.InheritedFromUniqueProcessId);
+  if(hProcess == NULL) return ERROR_CANNOT_OPEN_PROCESS;
 
-  GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH);
+  if(GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH) == 0) return ERROR_CANNOT_GET_PARENT_PROC_PATH;
   if(lstrcmp("cmd.exe", parentPath + lstrlen(parentPath) - 7) != 0) {
     MessageBox(0, "Parrent process must be cmd.exe!", "", MB_OK | MB_ICONINFORMATION);
-    return -2;
+    return ERROR_NOT_CMDEXE;
   }
 
   HANDLE hProcHeap = GetProcessHeap();
+  if(hProcHeap == NULL) return ERROR_CANNOT_OPEN_HEAP;
 
   int argc = 0, retcode = 0;
   LPCWSTR *args = CommandLineToArgvW(GetCommandLineW(), &argc);
 
   if(argc > 0 && PathFileExistsW(args[1]))
-    LoadAndHook(hProcHeap, hProcess, args[1]);
-  else retcode = -4;
+    retcode = LoadAndHook(hProcHeap, hProcess, args[1]);
+  else retcode = ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS;
 
   CloseHandle(hProcess);
   CloseHandle(hProcHeap);

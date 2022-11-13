@@ -10,16 +10,16 @@ mode 80,33
 ::color 70
 <nul set /p=[?25l
 
-set /a mousexpos=mouseypos=keypressed=lastkey=0
+set /a mousexpos=mouseypos=wheeldelta=0
 set discordappid=1035630279416610856
 set discordstate=Hello world
 set discorddetails=Test ^| Test1
-set discordlargeimg=canary-large
+set discordlargeimg=nobitches
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
 
-for %%x in (getinput) do ..\dist\inject.exe ..\dist\%%x.dll
+for %%x in (getinput discordrpc) do ..\dist\inject.exe ..\dist\%%x.dll
 
 set sprite_unselected_line1=xxxxxxxx
 set sprite_unselected_line2=xoooooox
@@ -34,20 +34,20 @@ set sprite_selected_line4=xxxxxxxx
 set sprite_selected_line5=xxxxxxxx
 
 set /a notimes=0
+<nul set /p=[3;0Hnot clicked
 
 :main
 :: color 70
 set /a mx=iconshover=0
 <nul set /p=[1;0Hmclick:	!click!  	mx:	!mousexpos!  	my:	!mouseypos!  	wheel:!wheeldelta!  	
-<nul set /p=[2;0Hkeys pressed: %keyspressed%                                                         & :: this space is required
-:: title %notimes%
+<nul set /p=[2;0Hkeys pressed: %keyspressed%                     & :: leave some space
+:: title %keyspressed%
 
 if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! LEQ 21 (
   call :sprite selected 14 10 8 5
   set iconshover=1
   if !click! EQU 1 ( <nul set /p=[3;0Hclicked     ) else <nul set /p=[3;0Hnot clicked
 )
-<nul set /p=[3;0H
 if !iconshover! EQU 0 call :sprite unselected 14 10 8 5
 
 goto :main

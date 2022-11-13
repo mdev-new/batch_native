@@ -1,17 +1,10 @@
 #pragma once
 #include <stdint.h>
 
-#define LZ77_MATCH_LENGTH_BITS 8
-#define LZ77_MATCH_OFFSET_BITS (16 - LZ77_MATCH_LENGTH_BITS)
+uint32_t lz77_decompress(uint8_t *input, uint32_t input_length, uint8_t *output, uint32_t output_limit, char match_len_bits) {
+    const uint16_t WindowSize = (1 << match_len_bits) - 1;
+    const uint16_t MatchMaxLenght = (1 << match_len_bits) - 1; // also used as bitmask for extracting length from match
 
-#if LZ77_MATCH_LENGTH_BITS > 8 || LZ77_MATCH_LENGTH_BITS < 2
-    #error LZ77_MATCH_LENGTH_BITS must be in 2-8 range
-#endif
-
-static const uint16_t WindowSize = (1 << LZ77_MATCH_OFFSET_BITS) - 1;
-static const uint16_t MatchMaxLenght = (1 << LZ77_MATCH_LENGTH_BITS) - 1; // also used as bitmask for extracting length from match
-
-uint32_t lz77_decompress(uint8_t *input, uint32_t input_length, uint8_t *output, uint32_t output_limit) {
     uint32_t output_cursor = 0;
     uint8_t input_literal_bitmask = input[0];
     uint8_t input_bitmask = 0;
@@ -41,7 +34,7 @@ uint32_t lz77_decompress(uint8_t *input, uint32_t input_length, uint8_t *output,
                 uint16_t match = (h << 8) | l;
                 uint16_t length = match & MatchMaxLenght;
 
-                uint16_t offset = match >> LZ77_MATCH_LENGTH_BITS;
+                uint16_t offset = match >> match_len_bits;
                 for (uint16_t i = 0; i < length; i++) {
                     if (output_cursor < output_limit) {
                         output[output_cursor] = output[output_cursor - offset];

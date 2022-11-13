@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #define LZ77_MATCH_LENGTH_BITS 8
-
 #define LZ77_MATCH_OFFSET_BITS (16 - LZ77_MATCH_LENGTH_BITS)
 
 #if LZ77_MATCH_OFFSET_BITS + LZ77_MATCH_LENGTH_BITS != 16
@@ -108,12 +107,18 @@ int main(int argc, char *argv[]) {
     fseek(fptr_r, 0, SEEK_SET);
 
 	char *inBuffer = malloc(inlen);
-	char *outBuffer = malloc((inlen * 9 / 8 + 1) + 4);
+	char *outBuffer = malloc((inlen * 9 / 8 + 1) + 9);
 	fread(inBuffer, inlen, 1, fptr_r);
 	int res = lz77_compress(inBuffer, inlen, outBuffer, (inlen * 9 / 8 + 1));
 
-    memcpy(outBuffer+res, &inlen, sizeof(inlen));
-	fwrite(outBuffer, res+4, 1, fptr_w);
+    char bits = LZ77_MATCH_LENGTH_BITS;
+
+    char lz77signature[] = {'L', 'Z', '7', '7'}; // to support multiple compression algos
+
+    memcpy(outBuffer+res+0, &lz77signature, 4);
+    memcpy(outBuffer+res+4, &bits, 1);
+    memcpy(outBuffer+res+5, &inlen, 4);
+	fwrite(outBuffer, res+9, 1, fptr_w);
 
 	free(inBuffer);
 	free(outBuffer);
