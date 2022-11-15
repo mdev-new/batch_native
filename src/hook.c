@@ -128,6 +128,8 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
   BYTE *buffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, fileSize);
   if(!ReadFile(hFile, buffer, fileSize, &numOfBytesRead, NULL)) return ERROR_CANNOT_READ_FILE;
 
+	char *compSignature /*[4]*/ = (char *)(buffer+fileSize-9);
+
   DWORD realSize = *(DWORD *)(buffer+fileSize-4);
   BYTE lz77_match_len_bits = *(BYTE *)(buffer+fileSize-5);
   BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);

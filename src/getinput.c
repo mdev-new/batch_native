@@ -16,19 +16,14 @@
 // compiler, i know what im doing, now shut up
 #pragma GCC diagnostic ignored "-Wimplicit-int"
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-#define ENV SetEnvironmentVariable
 
 // i am too lazy lmfao
 #define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
+#define ENV SetEnvironmentVariable
 #define InRange(x, b, t) (b < x && x < t)
 
 signed wheelDelta = 0; // this is NOT thread safe, at all.
-
-wchar_t *wcscpy(wchar_t * restrict s1, const wchar_t * restrict s2) {
-	wchar_t *cp = s1;
-	while ((*cp++ = *s2++) != L'\0');
-	return s1;
-}
+signed resetDeltaCounter = 0;
 
 BYTE b[21] = {0}, *c;
 PCHAR itoa_(i,x) {
@@ -39,7 +34,7 @@ PCHAR itoa_(i,x) {
 
 BYTE conversion_table[] = {
 //         0     1     2     3     4     5     6     7     8     9     A     B     C     D     E     F
-/* 0 */    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+/* 0 */    -1  , -1  , 0x02, 0x03, -1  , -1  , -1  , 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, // exclude mouse buttons
 /* 1 */    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
 /* 2 */    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
 /* 3 */    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
@@ -66,6 +61,7 @@ VOID process_keys() {
 
   for(int i = 3; i < 0x100; i++) {
     state = GetAsyncKeyState(i);
+    // todo optimize
     if (!m[i] && state & 0x8000) { m[i] = TRUE; actionHappened = TRUE; }
     if (m[i] && !state) { m[i] = FALSE; actionHappened = TRUE; }
 
@@ -97,6 +93,8 @@ VOID process_keys() {
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   MSLLHOOKSTRUCT *info = (MSLLHOOKSTRUCT *)lParam;
   wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
+	resetDeltaCounter = 10; // 5 * SLEEPDIV => 225ms
+
   if (wheelDelta != 0) wheelDelta /= WHEEL_DELTA;
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
@@ -114,31 +112,26 @@ DWORD CALLBACK Process(void *data) {
   POINT pt;
 
   COORD * fontSz = &info.dwFontSize;
-  UCHAR key;
 
-  __m128d vec;
+  //__m128d vec;
 
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
-	CONSOLE_FONT_INFOEX cfi;
-  cfi.cbSize = sizeof(cfi);
-  cfi.nFont = 0;
-  cfi.dwFontSize.X = 8;
-  cfi.dwFontSize.Y = 8;
-  cfi.FontFamily = FF_DONTCARE;
-  cfi.FontWeight = FW_NORMAL;
-  wcscpy(cfi.FaceName, L"Terminal"); // Any invalid face name will do
-  SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
   MSG mouseMsg;
 
+    // goal is to sleep as much as possible
+    // which we are :)
+    // this loop takes less than 1ms
   while(TRUE) {
-    SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);
+	SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);
     GetCurrentConsoleFont(hOut, FALSE, &info);
 
+    // todo off by some pixels
     GetCursorPos(&pt);
     ScreenToClient(hCon,&pt);
-    PhysicalToLogicalPoint(hCon, &pt);
+    PhysicalToLogicalPointForPerMonitorDPI(hCon, &pt);
 
     // Get mouse click
     mouseclick = 
@@ -150,10 +143,12 @@ DWORD CALLBACK Process(void *data) {
     if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
       mouseclick = mouseclick == 1? 1 : 2;
 
-    vec = __builtin_ia32_roundpd(_mm_setr_pd(pt.x, pt.y) / _mm_setr_pd(fontSz->X, fontSz->Y), _MM_FROUND_CEIL) -1;
+    // todo off by some pixels
+    // lets not process it as floats for now (inaccurate?)
+    //vec = _mm_setr_pd(pt.x, pt.y) / _mm_setr_pd(fontSz->X, fontSz->Y);
 
-    ENV("mousexpos", itoa_((int)vec[0]));
-    ENV("mouseypos", itoa_((int)vec[1]));
+    ENV("mousexpos", itoa_(pt.x / fontSz->X));
+    ENV("mouseypos", itoa_(pt.y / fontSz->Y));
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));
@@ -161,6 +156,8 @@ DWORD CALLBACK Process(void *data) {
 
       process_keys();
     }
+
+	if(resetDeltaCounter && --resetDeltaCounter == 0) wheelDelta = 0;
 
     PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
     Sleep(1000 / 45);
