@@ -22,8 +22,7 @@
 #define ENV SetEnvironmentVariable
 #define InRange(x, b, t) (b < x && x < t)
 
-signed wheelDelta = 0; // this is NOT thread safe, at all.
-signed resetDeltaCounter = 0;
+signed wheelDelta = 0;
 
 BYTE b[21] = {0}, *c;
 PCHAR itoa_(i,x) {
@@ -89,13 +88,13 @@ VOID process_keys() {
   SetEnvironmentVariable("keyspressed",buffer);
 }
 
-// todo wheel delta doesnt get reset when other mouse events dont happen, for example reset delta back to 0 you have to move the mouse
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   MSLLHOOKSTRUCT *info = (MSLLHOOKSTRUCT *)lParam;
   wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
-	resetDeltaCounter = 10; // 5 * SLEEPDIV => 225ms
-
-  if (wheelDelta != 0) wheelDelta /= WHEEL_DELTA;
+  if (wheelDelta != 0) {
+	wheelDelta /= WHEEL_DELTA;
+	ENV("wheeldelta", itoa_(wheelDelta));
+  }
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
@@ -113,27 +112,20 @@ DWORD CALLBACK Process(void *data) {
 
   COORD * fontSz = &info.dwFontSize;
 
-  //__m128d vec;
-
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
   MSG mouseMsg;
 
-    // goal is to sleep as much as possible
-    // which we are :)
-    // this loop takes less than 1ms
   while(TRUE) {
 	SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);
     GetCurrentConsoleFont(hOut, FALSE, &info);
 
-    // todo off by some pixels
     GetCursorPos(&pt);
     ScreenToClient(hCon,&pt);
     PhysicalToLogicalPointForPerMonitorDPI(hCon, &pt);
 
-    // Get mouse click
     mouseclick = 
         GetKeyState(VK_LBUTTON) & 0x80 ? 1
       : GetKeyState(VK_RBUTTON) & 0x80 ? 2
@@ -143,28 +135,18 @@ DWORD CALLBACK Process(void *data) {
     if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
       mouseclick = mouseclick == 1? 1 : 2;
 
-    // todo off by some pixels
-    // lets not process it as floats for now (inaccurate?)
-    //vec = _mm_setr_pd(pt.x, pt.y) / _mm_setr_pd(fontSz->X, fontSz->Y);
-
     ENV("mousexpos", itoa_(pt.x / fontSz->X));
     ENV("mouseypos", itoa_(pt.y / fontSz->Y));
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));
-      ENV("wheeldelta", itoa_(wheelDelta));
 
       process_keys();
     }
 
-	if(resetDeltaCounter && --resetDeltaCounter == 0) wheelDelta = 0;
-
     PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
     Sleep(1000 / 45);
   }
-
-  // Never returns
-  return TRUE;
 }
 
 BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {

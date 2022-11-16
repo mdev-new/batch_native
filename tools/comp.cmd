@@ -6,7 +6,7 @@ if not exist bin\comptool.exe (
     gcc -o bin\comptool.exe tools\comptool.c
 )
 
-set optargs=-Isrc -std=gnu99 -m64 -msse4.1 -Os -flto -fno-pic -fno-pie -fno-plt -fvisibility=hidden -fcompare-debug-second -fno-exceptions -fno-stack-protector -fno-math-errno -fno-ident -fno-asynchronous-unwind-tables -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-s,--gc-sections,--reduce-memory-overheads,--no-seh,--disable-reloc-section,--build-id=none
+set optargs=-Isrc -std=gnu99 -m64 -msse4.1 -Os -flto -fno-pic -fno-pie -fno-plt -fvisibility=hidden -fcompare-debug-second -fno-exceptions -fno-stack-protector -fno-math-errno -fno-ident -fno-asynchronous-unwind-tables -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-s,--gc-sections,--reduce-memory-overheads,--no-seh,--disable-reloc-section,--build-id=none -DNDEBUG
 
 gcc -shared -o bin\getinput.dll src\getinput.c %optargs% -luser32 -lkernel32 -lshcore -Wl,-e,DllMain
 gcc -shared -o bin\consoleutils.dll src\consoleutils.c %optargs% -luser32 -lkernel32 -Wl,-e,DllMain
@@ -19,5 +19,5 @@ for %%a in (getinput discordrpc consoleutils) do (
 	bin\comptool bin\%%a.dll dist\%%a.dll
 )
 
-gcc -o dist\inject.exe src\hook.c -Isrc -Ibin -std=gnu99 -m64 -mwindows %optargs% -Wl,-e,WinMain -lntdll -lkernel32 -luser32 -lpsapi -lshlwapi -lshell32
+gcc -o dist\inject.exe src\hook.c src\extern\chkstk.S -Isrc -Ibin -std=gnu99 -m64 -mwindows %optargs% -Wl,-e,WinMain -lntdll -lkernel32 -luser32 -lpsapi -lshlwapi -lshell32
 strip --strip-unneeded -s -R .comment -R .gnu.version dist\inject.exe

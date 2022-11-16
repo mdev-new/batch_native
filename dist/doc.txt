@@ -26,11 +26,12 @@ Last update: 11 November 2022
 --- GetInput ---
 (o) keyspressed*: is formatted like this: -keycode1-keycode2-keycode3-
 (o) click: left=1,right=2
-(o) wheeldelta: up=-1,down=1
+(o) wheeldelta***: up=-1,down=1
 (o) mousexpos**
 (o) mouseypos**
 * uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 ** measured in characters
+*** doesnt get reset, reset it manually
 
 -- DiscordRpc ---
 (i) discordappid - your own app id (created on the discord developer portal)

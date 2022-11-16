@@ -9,6 +9,10 @@
 #include <shlwapi.h>
 #include "extern/lz77.h"
 
+#define SINFL_IMPLEMENTATION
+#include "extern/sinfl.h"
+#include "shared.h"
+
 typedef unsigned __int64 QWORD;
 
 typedef enum {
@@ -128,19 +132,36 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
   BYTE *buffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, fileSize);
   if(!ReadFile(hFile, buffer, fileSize, &numOfBytesRead, NULL)) return ERROR_CANNOT_READ_FILE;
 
-	char *compSignature /*[4]*/ = (char *)(buffer+fileSize-9);
-
   DWORD realSize = *(DWORD *)(buffer+fileSize-4);
-  BYTE lz77_match_len_bits = *(BYTE *)(buffer+fileSize-5);
-  BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
-    if(decompBuffer == NULL) return ERROR_CANNOT_ALLOCATE;
+  BYTE compressionType = *(BYTE *)(buffer+fileSize-6);
 
-  int decomp = lz77_decompress(buffer, fileSize, decompBuffer, realSize+1, lz77_match_len_bits);
-  int retcode = HookDll(hProcess, decompBuffer);
+	int retcode = 0;
+
+	switch(compressionType) {
+	case UNCOMPRESSED: HookDll(hProcess, buffer); break; // Uncompressed
+	case ALGO_LZ77: {
+		BYTE lz77_match_len_bits = *(BYTE *)(buffer+fileSize-5);
+		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
+		if(decompBuffer == NULL) return ERROR_CANNOT_ALLOCATE;
+
+		int decomp = lz77_decompress(buffer, fileSize, decompBuffer, realSize+1, lz77_match_len_bits);
+		retcode = -((decomp == 0) + HookDll(hProcess, decompBuffer));
+		HeapFree(hProcHeap, 0, decompBuffer);
+	}; break;
+	case ALGO_DEFLATE: {
+		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
+		if(decompBuffer == NULL) return ERROR_CANNOT_ALLOCATE;
+
+		sinflate(decompBuffer, realSize+1, buffer, fileSize);
+		HookDll(hProcess, decompBuffer);
+
+		HeapFree(hProcHeap, 0, decompBuffer);
+	}; break;
+	}
 
   if(HeapFree(hProcHeap, 0, buffer) == 0) return ERROR_CANNOT_FREE;
   CloseHandle(hFile);
-  return -((decomp == 0) + retcode);
+  return retcode;
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
