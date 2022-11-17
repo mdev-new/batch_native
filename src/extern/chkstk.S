@@ -6,6 +6,7 @@
 .endef
 
 # No idea if this works
+# and what it does
 ___chkstk_ms:
         push   %rcx
         push   %rax

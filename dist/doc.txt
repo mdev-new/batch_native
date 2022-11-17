@@ -3,7 +3,7 @@
 ============================================
 
 Written by MousieDev & Kenan238
-Last update: 11 November 2022
+Last update: 17 November 2022
 
 === Table of contents ===
 => Features
@@ -65,12 +65,28 @@ set discordsmallimgtxt=Small image Test
 inject.exe discord.dll
 
 === Notes ===
-inject.exe returns different values on:
-- Sucessful hook: 0
-- Can't query parent process info: -3
-- Parent process isn't cmd.exe: -2
-  - This also makes MessageBox telling you
-- Some random fuckup: Literally any other value
+--- Injector ---
+Return values:
+  - Parent process isn't cmd.exe: -2*
+  - Cannot get parent process: -3
+  - File doesn't exist: -4
+  - Cannot open file: -5
+  - File is empty: -6
+  - Cannot read file: -7
+  - Cannot allocate: -8
+  - Cannot free: -9
+  - Cannot decompress: -10
+  - Cannot inject: -11
+  - Cannot write process memory: -12
+  - Cannot allocate process memory: -13
+  - Cannot free process memory: -14
+  - Cannot open parent process: -15
+  - Cannot open heap: -15
+  - Cannot get parent process path: -16
+  - Invalid file: -17
+  - Some random fuckup/crash: Literally any other value
+
+*also makes messagebox telling you
 
 === Minimum system requirements ===
 OS:  Windows Vista x64

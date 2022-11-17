@@ -15,7 +15,7 @@
 
 typedef unsigned __int64 QWORD;
 
-typedef enum {
+enum {
   ERROR_NOT_CMDEXE = -2,
   ERROR_CANNOT_GET_PARENT_PROC = -3,
   ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS = -4,
@@ -32,7 +32,8 @@ typedef enum {
   ERROR_CANNOT_OPEN_PROCESS = -15,
   ERROR_CANNOT_OPEN_HEAP = -15,
   ERROR_CANNOT_GET_PARENT_PROC_PATH = -16,
-} ReturnCodes;
+  ERROR_INVALID_FILE = -17
+};
 
 typedef struct {
     PBYTE imageBase;
@@ -132,28 +133,28 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
   BYTE *buffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, fileSize);
   if(!ReadFile(hFile, buffer, fileSize, &numOfBytesRead, NULL)) return ERROR_CANNOT_READ_FILE;
 
-  DWORD realSize = *(DWORD *)(buffer+fileSize-4);
-  BYTE compressionType = *(BYTE *)(buffer+fileSize-6);
-
+	Footer *footer = (Footer *)(buffer+fileSize-sizeof(Footer));
+	if(footer->magic != MAGIC) return ERROR_INVALID_FILE;
 	int retcode = 0;
 
-	switch(compressionType) {
-	case UNCOMPRESSED: HookDll(hProcess, buffer); break; // Uncompressed
+	switch(footer->compression_type) {
+	case UNCOMPRESSED: HookDll(hProcess, buffer); break;
 	case ALGO_LZ77: {
-		BYTE lz77_match_len_bits = *(BYTE *)(buffer+fileSize-5);
-		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
+		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, footer->uncompressed_file_size+2);
 		if(decompBuffer == NULL) return ERROR_CANNOT_ALLOCATE;
 
-		int decomp = lz77_decompress(buffer, fileSize, decompBuffer, realSize+1, lz77_match_len_bits);
-		retcode = -((decomp == 0) + HookDll(hProcess, decompBuffer));
+		int decomp = lz77_decompress(buffer, fileSize, decompBuffer, footer->uncompressed_file_size+1, footer->compressor_config);
+		if(decomp != footer->uncompressed_file_size) return ERROR_CANNOT_DECOMPRESS;
+		retcode = HookDll(hProcess, decompBuffer) == footer->uncompressed_file_size ?:ERROR_CANNOT_HOOK;
 		HeapFree(hProcHeap, 0, decompBuffer);
 	}; break;
 	case ALGO_DEFLATE: {
-		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, realSize+2);
+		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, footer->uncompressed_file_size+2);
 		if(decompBuffer == NULL) return ERROR_CANNOT_ALLOCATE;
 
-		sinflate(decompBuffer, realSize+1, buffer, fileSize);
-		HookDll(hProcess, decompBuffer);
+		int decomp = sinflate(decompBuffer, footer->uncompressed_file_size+1, buffer, fileSize);
+		if(decomp != footer->uncompressed_file_size) return ERROR_CANNOT_DECOMPRESS;
+		retcode = HookDll(hProcess, decompBuffer) == footer->uncompressed_file_size ?:ERROR_CANNOT_HOOK;
 
 		HeapFree(hProcHeap, 0, decompBuffer);
 	}; break;

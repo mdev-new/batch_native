@@ -39,15 +39,20 @@ int main(int argc, char *argv[]) {
     fseek(fptr_r, 0, SEEK_SET);
 
 	char *inBuffer = malloc(inlen);
-	char *outBuffer = malloc(inlen*2 + 9);
+	char *outBuffer = malloc(inlen*2 + sizeof(Footer));
 	fread(inBuffer, inlen, 1, fptr_r);
 	int res = compressPtr(inBuffer, outBuffer, inlen);
 
+	Footer footer = {
+		.compression_type = type,
+		.compressor_config = bits,
+		.uncompressed_file_size = inlen,
+		.magic = MAGIC
+	};
+
 	// write the footer
-    memcpy(outBuffer+res+0, &type, 1);
-    memcpy(outBuffer+res+1, &bits, 1);
-    memcpy(outBuffer+res+2, &inlen, 4);
-	fwrite(outBuffer,res+6, 1, fptr_w);
+    memcpy(outBuffer+res+0, &footer, sizeof(Footer));
+	fwrite(outBuffer,res+sizeof(Footer), 1, fptr_w);
 
 	free(inBuffer);
 	free(outBuffer);

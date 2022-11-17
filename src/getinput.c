@@ -74,13 +74,18 @@ VOID process_keys() {
   if(!isAnyKeyDown) {SetEnvironmentVariable("keyspressed", NULL); return;} // this DOES work
   ZeroMemory(buffer, 0x300);
 
-  buffer[0] = '-';
   for(int i = 0; i < 0x100; i++) {
     if(m[i]) {
       int num = conversion_table[i];
       if(num != (BYTE)(-1)) {
-        lstrcat(buffer, itoa_(num));
-        lstrcat(buffer, "-");
+		if(buffer[0] == 0) {
+			buffer[0] = '-';
+#ifdef IS_YESHI_ANNOYING_AGAIN
+			ENV("keypressed", itoa_(num));
+#endif
+		}
+        	lstrcat(buffer, itoa_(num));
+        	lstrcat(buffer, "-");
       }
     }
   }
@@ -98,6 +103,12 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
+// until i come up with better approach this has to do
+double compatibility[] = {
+	-.5, -.5, // 1080p
+	-2., -.5  // 1440p
+};
+
 DWORD CALLBACK Process(void *data) {
   // todo maybe close these
   HANDLE 
@@ -108,39 +119,55 @@ DWORD CALLBACK Process(void *data) {
   BYTE mouseclick;
   
   CONSOLE_FONT_INFO info;
-  POINT pt;
+  POINT pt, font;
 
   COORD * fontSz = &info.dwFontSize;
+	//RECT res;
 
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
-    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+  int scale = 100/*, vres*/;
+
+	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
   MSG mouseMsg;
+
+	__m128d a, b, c, d = _mm_setr_pd(0, -.5);
+	__m64 unpack;
 
   while(TRUE) {
 	SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);
     GetCurrentConsoleFont(hOut, FALSE, &info);
+	GetScaleFactorForMonitor(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
+	//GetWindowRect(GetDesktopWindow(), &res); //!!!todo make work on multiple monitors
 
     GetCursorPos(&pt);
     ScreenToClient(hCon,&pt);
-    PhysicalToLogicalPointForPerMonitorDPI(hCon, &pt);
 
     mouseclick = 
-        GetKeyState(VK_LBUTTON) & 0x80 ? 1
-      : GetKeyState(VK_RBUTTON) & 0x80 ? 2
-      : 0;
+		(GetKeyState(VK_LBUTTON) & 0x80) >> 7 |
+		(GetKeyState(VK_RBUTTON) & 0x80) >> 6 |
+		(GetKeyState(VK_MBUTTON) & 0x80) >> 5;
 
-    // swap mouse buttons if needed
-    if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
-      mouseclick = mouseclick == 1? 1 : 2;
+	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
+		mouseclick = ~(mouseclick & 0b11) | mouseclick; // todo when mouse buttons r inverted, the middle mouse button reports 5 instead of 4
 
-    ENV("mousexpos", itoa_(pt.x / fontSz->X));
-    ENV("mouseypos", itoa_(pt.y / fontSz->Y));
+	// works, but needs massive cleanup
+	//vres = (res.bottom - res.top);
+	a = _mm_setr_pd(pt.x, pt.y);
+	b = _mm_setr_pd(fontSz->X, fontSz->Y);
+	c = _mm_setr_pd((double)scale / 100.0, (double)scale / 100.0);
+	//d = _mm_setr_pd(compatibility[vres == 1080? 0 : vres != 1440?: 2], compatibility[vres == 1080? 1 : vres != 1440?: 3]);
+	a /= (b * c);
+	unpack = _mm_cvtpd_pi32(__builtin_ia32_roundpd(a+ d, _MM_FROUND_NEARBYINT));
+
+	//ENV("test", itoa_((res.bottom - res.top) / 360 - 4));
+    ENV("mousexpos", itoa_(unpack[0]));
+    ENV("mouseypos", itoa_(unpack[1]));
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));
-
       process_keys();
     }
 
