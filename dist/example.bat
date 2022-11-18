@@ -19,7 +19,7 @@ set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
 
-:: inject consoleutils.dll
+::inject consoleutils.dll
 inject discordrpc.dll
 inject getinput.dll
 
@@ -35,7 +35,7 @@ set sprite_selected_line3=xxxxxxxx
 set sprite_selected_line4=xxxxxxxx
 set sprite_selected_line5=xxxxxxxx
 
-set /a notimes=test=0
+set /a notimes=test=fx=fy=scale=0
 <nul set /p=[3;0Hnot clicked
 
 :main
@@ -45,7 +45,7 @@ set /a mx=iconshover=0
 <nul set /p=[2;0Hkeys pressed: %keyspressed%                     & :: leave some space
 :: title %keyspressed%
 :: title %time%
-::title %test%
+title %test% %fx% %fy% %scale% %facename%
 
 if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! LEQ 21 (
   call :sprite selected 14 10 8 5
