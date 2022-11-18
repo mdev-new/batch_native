@@ -31,6 +31,21 @@ PCHAR itoa_(i,x) {
   return c;
 }
 
+#define isdigit(x) (x >= '0' && x <= '9' ? 1 : 0)
+
+long atol(const char *num) {
+	long value = 0, neg = 0;
+	if (num[0] == '-') { neg = 1; num++; }
+	while (*num && isdigit(*num)) value = value * 10 + *num++  - '0';
+	return neg? -value : value;
+}
+
+long getenvnum(char *name) {
+	static char buffer[32] = {0};
+	GetEnvironmentVariable(name, buffer, sizeof(buffer));
+	return atol(buffer);
+}
+
 BYTE conversion_table[] = {
 //       0     1     2     3     4     5     6     7     8     9     A     B     C     D     E     F
 /* 0 */  -1  , -1  , 0x02, 0x03, -1  , -1  , -1  , 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, // exclude mouse buttons
@@ -112,24 +127,41 @@ DWORD CALLBACK Process(void *data) {
   BYTE mouseclick;
   
   CONSOLE_FONT_INFO info;
-  POINT pt[2], font;
-
   COORD * fontSz = &info.dwFontSize;
+  POINT pt;
 
-	CONSOLE_FONT_INFOEX infoex;
+	int rasterx = getenvnum("rasterx"),
+		rastery = getenvnum("rastery");
+
+	if(rasterx && rastery) {
+		CONSOLE_FONT_INFOEX cfi = {
+			.cbSize = sizeof(CONSOLE_FONT_INFOEX),
+			.nFont = 0,
+			.dwFontSize = {rasterx, rastery},
+			.FontFamily = FF_DONTCARE,
+			.FontWeight = FW_NORMAL,
+			.FaceName = L"Terminal"
+		};
+		SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+	}
+
+	if(getenvnum("noresize") == 1) {
+		DWORD style = GetWindowLong(hCon, GWL_STYLE);
+		SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
+	}
 
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
-  //float scale = GetDpiForWindow(hCon)/96.0f;
-
-	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	SetProcessDpiAwareness(DPI_AWARENESS_UNAWARE);
 
   MSG mouseMsg;
+  int scale = 100;
+	register float x, y;
 
   while(TRUE) {
 	SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);
     GetCurrentConsoleFont(hOut, FALSE, &info);
+	GetScaleFactorForMonitor(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
 
     GetCursorPos(&pt);
     ScreenToClient(hCon,&pt);
@@ -142,10 +174,13 @@ DWORD CALLBACK Process(void *data) {
 	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
 		mouseclick |= ~(mouseclick & 0b11); // todo when mouse buttons r inverted, the middle mouse button reports 5 instead of 4
 
-	pt[1].x = fontSz->X; LPtoDP(GetDC(hCon), &pt[1], 1);
-	pt[1].y = fontSz->Y; LPtoDP(GetDC(hCon), &pt[1], 1);
-	float x = pt[0].x / pt[1].x + 0.5f;
-	float y = pt[0].y / pt[1].y + 0.5f;
+	if(!(rasterx && rastery) && scale != 100) {
+		x = pt.x / (fontSz->X * (scale / 100.f)); // todo dont multiply on raster
+		y = pt.y / (fontSz->Y * (scale / 100.f));
+	} else {
+		x = pt.x / fontSz->X; // todo dont multiply on raster
+		y = pt.y / fontSz->Y;
+	}
 
     ENV("mousexpos", itoa_((int)x));
     ENV("mouseypos", itoa_((int)y));

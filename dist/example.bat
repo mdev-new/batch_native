@@ -18,9 +18,12 @@ set discordlargeimg=nobitches
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
+inject discordrpc.dll
 
 ::inject consoleutils.dll
-inject discordrpc.dll
+
+::set /a rasterx=rastery=8
+set /a noresize=1
 inject getinput.dll
 
 set sprite_unselected_line1=xxxxxxxx
@@ -45,7 +48,7 @@ set /a mx=iconshover=0
 <nul set /p=[2;0Hkeys pressed: %keyspressed%                     & :: leave some space
 :: title %keyspressed%
 :: title %time%
-title %test% %fx% %fy% %scale% %facename%
+:: title %test% %fx% %fy% %scale% %facename%
 
 if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! LEQ 21 (
   call :sprite selected 14 10 8 5

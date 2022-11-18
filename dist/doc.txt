@@ -29,9 +29,13 @@ Last update: 17 November 2022
 (o) wheeldelta***: up=-1,down=1
 (o) mousexpos**
 (o) mouseypos**
-* uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-** measured in characters
-*** doesnt get reset, reset it manually
+(i) noresize: 1 to disable resizing
+(i) rasterx:  - optional: turn on the raster font and set its size to x and y
+(i) rastery:  |
+
+*    uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+**   measured in characters
+***  doesnt get reset automatically, reset it manually
 
 -- DiscordRpc ---
 (i) discordappid - your own app id (created on the discord developer portal)
@@ -47,12 +51,12 @@ i=in,o=out
 
 === Example setup ===
 --- GetInput ---
-:: Reset the variables
-set /a mousexpos=mouseypos=keyspressed=click=wheeldelta=0
-inject.exe getinput.dll
+set /a mousexpos=mouseypos=keyspressed=click=wheeldelta=0 & :: Reset the variables
+set /a rasterx=8,rastery=8 & :: Optional: set 8x8 raster font
+inject getinput.dll
 
 :: Then you can use all the variables GetInput module provides:
-echo !mousexpos! !mouseypos!...
+echo !mousexpos! !mouseypos! !wheeldelta!...
 
 --- Discord RPC ---
 set /a discordappid=0000000000000000000 &:: fill in your own obviously

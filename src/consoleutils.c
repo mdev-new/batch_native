@@ -14,15 +14,6 @@ DWORD CALLBACK Process(void *) {
     hIn = GetStdHandle(STD_INPUT_HANDLE);
   HWND hCon = GetConsoleWindow();
 
-	CONSOLE_FONT_INFOEX cfi;
-  cfi.cbSize = sizeof(cfi);
-  cfi.nFont = 0;
-  cfi.dwFontSize.X = 8;
-  cfi.dwFontSize.Y = 8;
-  cfi.FontFamily = FF_DONTCARE;
-  cfi.FontWeight = FW_NORMAL;
-  wcscpy(cfi.FaceName, L"Terminal"); // Any invalid face name will do
-  SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 
 	DWORD style = GetWindowLong(hCon, GWL_STYLE);
 	SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
