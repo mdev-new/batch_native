@@ -12,6 +12,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shellscalingapi.h>
+#include <math.h>
 
 // compiler, i know what im doing, now shut up
 #pragma GCC diagnostic ignored "-Wimplicit-int"
@@ -115,8 +116,6 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
-#define PXTODIP(x,y) ((float)(x) / y)
-
 DWORD CALLBACK Process(void *data) {
   // todo maybe close these
   HANDLE 
@@ -156,14 +155,14 @@ DWORD CALLBACK Process(void *data) {
 
   MSG mouseMsg;
   int scale = 100;
-	register float x, y;
+	register float x, y, fscalex, fscaley;
 
   while(TRUE) {
-	SetConsoleMode(hIn, ENABLE_EXTENDED_FLAGS & ~ENABLE_QUICK_EDIT_MODE);
+	SetConsoleMode(hIn, (~ENABLE_PROCESSED_INPUT) & (ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE)));
     GetCurrentConsoleFont(hOut, FALSE, &info);
 	GetScaleFactorForMonitor(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
 
-    GetCursorPos(&pt);
+    GetPhysicalCursorPos(&pt);
     ScreenToClient(hCon,&pt);
 
     mouseclick = 
@@ -174,16 +173,15 @@ DWORD CALLBACK Process(void *data) {
 	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
 		mouseclick |= ~(mouseclick & 0b11); // todo when mouse buttons r inverted, the middle mouse button reports 5 instead of 4
 
-	if(!(rasterx && rastery) && scale != 100) {
-		x = pt.x / (fontSz->X * (scale / 100.f)); // todo dont multiply on raster
-		y = pt.y / (fontSz->Y * (scale / 100.f));
-	} else {
-		x = pt.x / fontSz->X; // todo dont multiply on raster
-		y = pt.y / fontSz->Y;
-	}
+	if(!rasterx && !rastery) fscalex = fscaley = (float)(scale) / 100.f;
+	else if(rasterx && rastery && (scale - 100 * (scale / 100)) < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;
+	else if(rasterx && rastery && (scale - 100 * (scale / 100)) > 50 && scale % 100 != 0) { fscalex = (scale / 100L) + 1.f; fscaley = (float)(scale - scale % 50) / 100.f; };
 
-    ENV("mousexpos", itoa_((int)x));
-    ENV("mouseypos", itoa_((int)y));
+	x = (float)pt.x / ((float)fontSz->X * fscalex);
+	y = (float)pt.y / ((float)fontSz->Y * fscaley);
+
+    ENV("mousexpos", itoa_((int)ceil(x - 1.f)));
+    ENV("mouseypos", itoa_((int)ceil(y - 1.f)));
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));

@@ -18,25 +18,23 @@ set discordlargeimg=nobitches
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
-inject discordrpc.dll
+::inject discordrpc.dll
 
-::inject consoleutils.dll
-
-::set /a rasterx=rastery=8
+::set /a rasterx=8,rastery=8
 set /a noresize=1
 inject getinput.dll
 
-set sprite_unselected_line1=xxxxxxxx
-set sprite_unselected_line2=xoooooox
-set sprite_unselected_line3=xoooooox
-set sprite_unselected_line4=xoooooox
-set sprite_unselected_line5=xxxxxxxx
+set sprite_unselected_line1=XXXXXXXX
+set sprite_unselected_line2=XOOOOOOX
+set sprite_unselected_line3=XOOOOOOX
+set sprite_unselected_line4=XOOOOOOX
+set sprite_unselected_line5=XXXXXXXX
 
-set sprite_selected_line1=xxxxxxxx
-set sprite_selected_line2=xxxxxxxx
-set sprite_selected_line3=xxxxxxxx
-set sprite_selected_line4=xxxxxxxx
-set sprite_selected_line5=xxxxxxxx
+set sprite_selected_line1=XXXXXXXX
+set sprite_selected_line2=XXXXXXXX
+set sprite_selected_line3=XXXXXXXX
+set sprite_selected_line4=XXXXXXXX
+set sprite_selected_line5=XXXXXXXX
 
 set /a notimes=test=fx=fy=scale=0
 <nul set /p=[3;0Hnot clicked
@@ -50,7 +48,9 @@ set /a mx=iconshover=0
 :: title %time%
 :: title %test% %fx% %fy% %scale% %facename%
 
-if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! LEQ 21 (
+<nul set /p=[4;0HOOOOOOOOOOOOOOOOOOOOOOOOOO
+
+if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! LEQ 20 (
   call :sprite selected 14 10 8 5
   set iconshover=1
   if !click! EQU 1 ( <nul set /p=[3;0Hclicked     ) else <nul set /p=[3;0Hnot clicked
