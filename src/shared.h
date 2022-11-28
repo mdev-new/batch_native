@@ -1,7 +1,6 @@
 #pragma once
 
-// This needs to be set in stone.
-// That means no reordering, and no removal of stuff and no changing types, etc.
+#define HEADER_VERSION 1
 
 enum {
 	UNCOMPRESSED,
@@ -10,10 +9,12 @@ enum {
 };
 
 typedef struct {
-	char compression_type;
-	short compressor_config;
-	long uncompressed_file_size;
 	short magic;
-} __attribute__((__packed__)) Footer;
+	char sizeOfSelf;
+	char headerVersion;
+	int compression;
+	long uncompressed_file_size;
+} __attribute__((__packed__)) Header;
 
-#define MAGIC 'kM' // in file its in reverse order
+#define MAGIC 'Mk' // in file its in reverse order
+#define VERSION 1

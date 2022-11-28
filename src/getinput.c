@@ -43,8 +43,7 @@ long atol(const char *num) {
 
 long getenvnum(char *name) {
 	static char buffer[32] = {0};
-	GetEnvironmentVariable(name, buffer, sizeof(buffer));
-	return atol(buffer);
+	return GetEnvironmentVariable(name, buffer, sizeof(buffer))? atol(buffer) : 0;
 }
 
 BYTE conversion_table[] = {
@@ -149,6 +148,10 @@ DWORD CALLBACK Process(void *data) {
 		SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
 	}
 
+	// DEVMODEA ddev = {0};
+	// ddev.dmSize = sizeof(DEVMODEA);
+	// ddev.dmDriverExtra = 0;
+
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
 	SetProcessDpiAwareness(DPI_AWARENESS_UNAWARE);
@@ -157,10 +160,18 @@ DWORD CALLBACK Process(void *data) {
   int scale = 100;
 	register float x, y, fscalex, fscaley;
 
+	char counter = 0;
+
   while(TRUE) {
+	Sleep(1000 / 125);
+	PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
+	++counter;
+	if((counter %= 5) != 0) continue;
+
 	SetConsoleMode(hIn, (~ENABLE_PROCESSED_INPUT) & (ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE)));
     GetCurrentConsoleFont(hOut, FALSE, &info);
 	GetScaleFactorForMonitor(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
+	// EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &ddev);
 
     GetPhysicalCursorPos(&pt);
     ScreenToClient(hCon,&pt);
@@ -172,6 +183,12 @@ DWORD CALLBACK Process(void *data) {
 
 	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
 		mouseclick |= ~(mouseclick & 0b11); // todo when mouse buttons r inverted, the middle mouse button reports 5 instead of 4
+
+	// 125% @ 1440p non raster doesnt scale properly
+	// or does it?
+	// you know you're fucked when you start applying fixes dependent on resolution, font and the scale
+	// appearently this shits broken only on consolas
+	//if(!rasterx && !rastery && scale == 125 && ddev.dmPelsHeight == 1440) { fscalex = 1.4f; fscaley = (float)(scale) / 100.f; }
 
 	if(!rasterx && !rastery) fscalex = fscaley = (float)(scale) / 100.f;
 	else if(rasterx && rastery && (scale - 100 * (scale / 100)) < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;
@@ -187,9 +204,6 @@ DWORD CALLBACK Process(void *data) {
       ENV("click", itoa_(mouseclick));
       process_keys();
     }
-
-    PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
-    Sleep(1000 / 45);
   }
 }
 

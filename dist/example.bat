@@ -7,20 +7,20 @@ setlocal enabledelayedexpansion
 
 >nul chcp 65001
 mode 80,33
-::color 70
+color 70
 <nul set /p=[?25l
 
 set /a mousexpos=mouseypos=wheeldelta=0
 set discordappid=1035630279416610856
-set discordstate=Hello world
-set discorddetails=Test ^| Test1
+set discordstate=Batch native
+set discorddetails=Testing discord rpc
 set discordlargeimg=nobitches
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
-::inject discordrpc.dll
+inject discordrpc.dll
 
-::set /a rasterx=8,rastery=8
+set /a rasterx=8,rastery=8
 set /a noresize=1
 inject getinput.dll
 
@@ -40,15 +40,10 @@ set /a notimes=test=fx=fy=scale=0
 <nul set /p=[3;0Hnot clicked
 
 :main
-:: color 70
+color 70
 set /a mx=iconshover=0
 <nul set /p=[1;0Hmclick:	!click!  	mx:	!mousexpos!  	my:	!mouseypos!  	wheel:!wheeldelta!  	
 <nul set /p=[2;0Hkeys pressed: %keyspressed%                     & :: leave some space
-:: title %keyspressed%
-:: title %time%
-:: title %test% %fx% %fy% %scale% %facename%
-
-<nul set /p=[4;0HOOOOOOOOOOOOOOOOOOOOOOOOOO
 
 if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! LEQ 20 (
   call :sprite selected 14 10 8 5
@@ -56,7 +51,6 @@ if !mouseypos! GEQ 9 if !mouseypos! LEQ 13 if !mousexpos! GEQ 13 if !mousexpos! 
   if !click! EQU 1 ( <nul set /p=[3;0Hclicked     ) else <nul set /p=[3;0Hnot clicked
 )
 if !iconshover! EQU 0 call :sprite unselected 14 10 8 5
-
 goto :main
 
 :sprite

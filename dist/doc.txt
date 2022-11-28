@@ -26,16 +26,15 @@ Last update: 17 November 2022
 --- GetInput ---
 (o) keyspressed*: is formatted like this: -keycode1-keycode2-keycode3-
 (o) click: left=1,right=2
-(o) wheeldelta***: up=-1,down=1
-(o) mousexpos**
-(o) mouseypos**
-(i) noresize: 1 to disable resizing
-(i) rasterx:  - optional: turn on the raster font and set its size to x and y
-(i) rastery:  |
+(o) wheeldelta***: up=-1,down=1 ; reset this manually once you process
+(o) mousexpos: - measured in cells
+(o) mouseypos: - measured in cells
+(i) noresize**: 1 to disable resizing
+(i) rasterx**:  - optional: turn on the raster font and set its size to x and y
+(i) rastery**:  /
 
 *    uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-**   measured in characters
-***  doesnt get reset automatically, reset it manually
+**   set those BEFORE you inject
 
 -- DiscordRpc ---
 (i) discordappid - your own app id (created on the discord developer portal)
