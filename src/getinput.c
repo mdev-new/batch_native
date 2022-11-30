@@ -18,30 +18,37 @@
 #pragma GCC diagnostic ignored "-Wimplicit-int"
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 
+#define GETINPUT_SUB __attribute__((noinline))
+
 // i am too lazy lmfao
 #define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
 #define ENV SetEnvironmentVariable
-#define InRange(x, b, t) (b < x && x < t)
 
 signed wheelDelta = 0;
 
 BYTE b[21] = {0}, *c;
-PCHAR itoa_(i,x) {
+PCHAR GETINPUT_SUB itoa_(i,x) {
   c=b+20,x=abs(i);
   do *--c = 48 + x % 10; while(x && (x/=10)); if(i<0) *--c = 45;
   return c;
 }
 
-#define isdigit(x) (x >= '0' && x <= '9' ? 1 : 0)
+int GETINPUT_SUB ma_ceil(double num)
+{   int a = num;
+    if ((double)a != num)
+        return a+1;
+    return a;
+}
 
-long atol(const char *num) {
+#define isdigit(x) (x >= '0' && x <= '9' ? 1 : 0)
+long GETINPUT_SUB atol(const char *num) {
 	long value = 0, neg = 0;
 	if (num[0] == '-') { neg = 1; num++; }
 	while (*num && isdigit(*num)) value = value * 10 + *num++  - '0';
 	return neg? -value : value;
 }
 
-long getenvnum(char *name) {
+long GETINPUT_SUB getenvnum(char *name) {
 	static char buffer[32] = {0};
 	return GetEnvironmentVariable(name, buffer, sizeof(buffer))? atol(buffer) : 0;
 }
@@ -69,7 +76,7 @@ BYTE conversion_table[] = {
 BYTE m[0x100] = {0};
 char buffer[0x300] = {0};
 /* TODO optimize */
-VOID process_keys() {
+VOID GETINPUT_SUB process_keys() {
   int isAnyKeyDown = 0, actionHappened = 0;
   BOOL state = 0;
 
@@ -105,7 +112,7 @@ VOID process_keys() {
   SetEnvironmentVariable("keyspressed",buffer);
 }
 
-LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT GETINPUT_SUB CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   MSLLHOOKSTRUCT *info = (MSLLHOOKSTRUCT *)lParam;
   wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
   if (wheelDelta != 0) {
@@ -115,8 +122,7 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
-DWORD CALLBACK Process(void *data) {
-  // todo maybe close these
+DWORD GETINPUT_SUB CALLBACK Process(void *data) {
   HANDLE 
     hOut = GetStdHandle(STD_OUTPUT_HANDLE),
     hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -148,30 +154,26 @@ DWORD CALLBACK Process(void *data) {
 		SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
 	}
 
-	// DEVMODEA ddev = {0};
-	// ddev.dmSize = sizeof(DEVMODEA);
-	// ddev.dmDriverExtra = 0;
-
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
 	SetProcessDpiAwareness(DPI_AWARENESS_UNAWARE);
 
   MSG mouseMsg;
-  int scale = 100;
-	register float x, y, fscalex, fscaley;
+  int scale = 100, roundedScale, prevScale = 0;
+	register float fscalex, fscaley;
 
 	char counter = 0;
+	__m128d fontSize, mousePos, result, xyScale, one = _mm_setr_pd(1, 1);
+	__m64 ints;
 
   while(TRUE) {
 	Sleep(1000 / 125);
 	PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
-	++counter;
-	if((counter %= 5) != 0) continue;
+	if(((++counter) % 5) != 0) continue;
 
 	SetConsoleMode(hIn, (~ENABLE_PROCESSED_INPUT) & (ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE)));
     GetCurrentConsoleFont(hOut, FALSE, &info);
 	GetScaleFactorForMonitor(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
-	// EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &ddev);
 
     GetPhysicalCursorPos(&pt);
     ScreenToClient(hCon,&pt);
@@ -182,23 +184,34 @@ DWORD CALLBACK Process(void *data) {
 		(GetKeyState(VK_MBUTTON) & 0x80) >> 5;
 
 	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
-		mouseclick |= ~(mouseclick & 0b11); // todo when mouse buttons r inverted, the middle mouse button reports 5 instead of 4
+		mouseclick |= mouseclick & 3;
 
-	// 125% @ 1440p non raster doesnt scale properly
-	// or does it?
-	// you know you're fucked when you start applying fixes dependent on resolution, font and the scale
-	// appearently this shits broken only on consolas
-	//if(!rasterx && !rastery && scale == 125 && ddev.dmPelsHeight == 1440) { fscalex = 1.4f; fscaley = (float)(scale) / 100.f; }
+	// todo maybe convert this to a lookup table
+	if(prevScale != scale) {
+		// this somehow works, !!DO NOT TOUCH!!
+		if(!rasterx && !rastery) fscalex = fscaley = (float)(scale) / 100.f;
+		else {
+			roundedScale = (scale - 100 * (scale / 100));
+			if(roundedScale < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;
+			else if(roundedScale > 50 && scale % 100 != 0) {
+				fscalex = (scale / 100L) + 1.f;
+				fscaley = (float)(scale - scale % 50) / 100.f;
+			}
+		}
 
-	if(!rasterx && !rastery) fscalex = fscaley = (float)(scale) / 100.f;
-	else if(rasterx && rastery && (scale - 100 * (scale / 100)) < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;
-	else if(rasterx && rastery && (scale - 100 * (scale / 100)) > 50 && scale % 100 != 0) { fscalex = (scale / 100L) + 1.f; fscaley = (float)(scale - scale % 50) / 100.f; };
+		xyScale = _mm_setr_pd(fscalex, fscaley);
+		prevScale = scale;
+	}
 
-	x = (float)pt.x / ((float)fontSz->X * fscalex);
-	y = (float)pt.y / ((float)fontSz->Y * fscaley);
+	fontSize = _mm_setr_pd(fontSz->X, fontSz->Y);
+	mousePos = _mm_setr_pd(pt.x, pt.y);
+	result = mousePos / (fontSize * xyScale) - one;
+	result = __builtin_ia32_roundpd(result, _MM_FROUND_CEIL);
+	ints = _mm_cvtpd_pi32(result);
 
-    ENV("mousexpos", itoa_((int)ceil(x - 1.f)));
-    ENV("mouseypos", itoa_((int)ceil(y - 1.f)));
+	// todo maybe completely vectorize
+    ENV("mousexpos", itoa_(ints[0]));
+    ENV("mouseypos", itoa_(ints[1]));
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));
@@ -207,7 +220,7 @@ DWORD CALLBACK Process(void *data) {
   }
 }
 
-BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
+BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
   if (dwReason == DLL_PROCESS_ATTACH) {
 	  DisableThreadLibraryCalls(hInst);
     CloseHandle(CreateThreadS(Process));

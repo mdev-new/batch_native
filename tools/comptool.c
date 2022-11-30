@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 		.uncompressed_file_size = inlen
 	};
 
-	printf("%d\n", header.compression);
+	//printf("%d\n", header.compression);
 
 	// write the footer
     memcpy(outBuffer, &header, sizeof(Header));

@@ -20,10 +20,10 @@ Last update: 17 November 2022
  - Multiple keys down at once support
 - Discord RPC
 - Easy to setup in existing or new projects
-- Small size (depending on chosen modules)
+- Small size (depends on chosen modules)
 
 === New environment variables ===
---- GetInput ---
+-- GetInput --
 (o) keyspressed*: is formatted like this: -keycode1-keycode2-keycode3-
 (o) click: left=1,right=2
 (o) wheeldelta***: up=-1,down=1 ; reset this manually once you process
@@ -49,7 +49,7 @@ Last update: 17 November 2022
 i=in,o=out
 
 === Example setup ===
---- GetInput ---
+-- GetInput --
 set /a mousexpos=mouseypos=keyspressed=click=wheeldelta=0 & :: Reset the variables
 set /a rasterx=8,rastery=8 & :: Optional: set 8x8 raster font
 inject getinput.dll
@@ -57,7 +57,7 @@ inject getinput.dll
 :: Then you can use all the variables GetInput module provides:
 echo !mousexpos! !mouseypos! !wheeldelta!...
 
---- Discord RPC ---
+-- Discord RPC --
 set /a discordappid=0000000000000000000 &:: fill in your own obviously
 set discordstate=Hello world
 set discorddetails=Test
@@ -68,7 +68,11 @@ set discordsmallimgtxt=Small image Test
 inject discordrpc.dll
 
 === Notes ===
---- Injector ---
+The ".dll" files distributed to you most likely aren't actual .dll's.
+They are compressed DLLs and get unpacked with the injector. So don't try
+injecting them manually through ProcessExplorer or stuff like this.
+
+-- Injector --
 Return values:
   - Parent process isn't cmd.exe: -2*
   - Cannot get parent process: -3
@@ -97,7 +101,7 @@ CPU: SSE4.1 support
 
 === Credits ===
 Kenan238  - original getinput.exe
-MousieDev - extensive rewrite, making it a dll and embedding the dll back to getinput.exe, main maintainer
+MousieDev - extensive rewrite, making it a dll, main maintainer
 
 === License ===
 Copyright (C) 2021-2022 MousieDev and Kenan238.  All rights reserved.
@@ -105,7 +109,7 @@ The files you recieved are not 'free' or 'public domain'. They are copyrighted
 material.
 
 By "Binaries" it is meant the files you recieved that are able to be executed
-on a computer and are not readable through regular text editor.
+on a computer and are not readable through regular text editor and/or word processor.
 
 You may not use, copy or modify or distribute any of the files you recieved
 with this software unless given writen permission from copyright holders.
