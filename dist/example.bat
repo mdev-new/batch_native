@@ -18,7 +18,7 @@ set discordlargeimg=nobitches
 set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
-inject discordrpc.dll
+::inject discordrpc.dll
 
 set /a rasterx=8,rastery=8
 set /a noresize=1

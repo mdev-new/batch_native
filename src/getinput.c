@@ -17,6 +17,7 @@
 // compiler, i know what im doing, now shut up
 #pragma GCC diagnostic ignored "-Wimplicit-int"
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+#pragma omp simd reduction(+: I)
 
 #define GETINPUT_SUB __attribute__((noinline))
 
@@ -163,8 +164,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	register float fscalex, fscaley;
 
 	char counter = 0;
-	__m128d fontSize, mousePos, result, xyScale, one = _mm_setr_pd(1, 1);
-	__m64 ints;
 
   while(TRUE) {
 	Sleep(1000 / 125);
@@ -186,7 +185,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
 		mouseclick |= mouseclick & 3;
 
-	// todo maybe convert this to a lookup table
 	if(prevScale != scale) {
 		// this somehow works, !!DO NOT TOUCH!!
 		if(!rasterx && !rastery) fscalex = fscaley = (float)(scale) / 100.f;
@@ -199,19 +197,13 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 			}
 		}
 
-		xyScale = _mm_setr_pd(fscalex, fscaley);
 		prevScale = scale;
 	}
 
-	fontSize = _mm_setr_pd(fontSz->X, fontSz->Y);
-	mousePos = _mm_setr_pd(pt.x, pt.y);
-	result = mousePos / (fontSize * xyScale) - one;
-	result = __builtin_ia32_roundpd(result, _MM_FROUND_CEIL);
-	ints = _mm_cvtpd_pi32(result);
-
 	// todo maybe completely vectorize
-    ENV("mousexpos", itoa_(ints[0]));
-    ENV("mouseypos", itoa_(ints[1]));
+	// or convert completely to integer operations
+    ENV("mousexpos", itoa_(ma_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f)));
+    ENV("mouseypos", itoa_(ma_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f)));
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));
