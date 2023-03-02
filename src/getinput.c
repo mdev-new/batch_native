@@ -14,6 +14,8 @@
 #include <shellscalingapi.h>
 #include <math.h>
 
+#include <stdbool.h>
+
 // compiler, i know what im doing, now shut up
 #pragma GCC diagnostic ignored "-Wimplicit-int"
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
@@ -138,7 +140,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	int rasterx = getenvnum("rasterx"),
 		rastery = getenvnum("rastery");
 
-	if(rasterx && rastery) {
+	const bool isRaster = rasterx && rastery;
+
+	if(isRaster) {
 		CONSOLE_FONT_INFOEX cfi = {
 			.cbSize = sizeof(CONSOLE_FONT_INFOEX),
 			.nFont = 0,
@@ -187,7 +191,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 
 	if(prevScale != scale) {
 		// this somehow works, !!DO NOT TOUCH!!
-		if(!rasterx && !rastery) fscalex = fscaley = (float)(scale) / 100.f;
+		if(!isRaster) fscalex = fscaley = (float)(scale) / 100.f;
 		else {
 			roundedScale = (scale - 100 * (scale / 100));
 			if(roundedScale < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;

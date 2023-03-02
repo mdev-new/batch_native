@@ -10,13 +10,15 @@ title example
 :: run from \examples directory
 if "%1" NEQ "nohook" (
   set /a mousexpos=mouseypos=keypressed=0
+set discordappid=1035630279416610856
+set discordstate=Hello world
+set discorddetails=Test
+set discordlargeimg=canary-large
+set discordlargeimgtxt=Test1
+set discordsmallimg=ptb-small
+set discordsmallimgtxt=Test2
 
-	for %%x in (getinput discord) do ..\dist\batch_native.exe ..\dist\%%x.dll
-  if !errorlevel! NEQ 0 (
-    echo error while hooking into cmd %errorlevel%
-    pause
-    exit /b
-  )
+	for %%x in (getinput discordrpc) do ..\dist\inject.exe ..\dist\%%x.dll
 )
 
 set kblast=0
