@@ -11,6 +11,7 @@ set discordlargeimgtxt=Test1
 set discordsmallimg=ptb-small
 set discordsmallimgtxt=Test2
 for %%x in (getinput discordrpc) do ..\dist\inject.exe ..\dist\%%x.dll
+pause
 :a
 title !click! !mousexpos! !mouseypos! !wheeldelta!
 echo !keyspressed!

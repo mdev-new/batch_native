@@ -44,7 +44,7 @@ DWORD Process() {
 	discordPresence.state = readenv("discordstate");
 	discordPresence.details = readenv("discorddetails");
 	discordPresence.startTimestamp = time(0);
-	discordPresence.endTimestamp = NULL;
+	discordPresence.endTimestamp = 0;
 	discordPresence.largeImageKey = readenv("discordlargeimg");
 	discordPresence.largeImageText = readenv("discordlargeimgtxt");
 	discordPresence.smallImageKey = readenv("discordsmallimg");

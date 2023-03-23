@@ -3,7 +3,7 @@
 ============================================
 
 Written by MousieDev & Kenan238
-Last update: 17 November 2022
+Last update: 23rd of March 2023
 
 === Table of contents ===
 => Features
@@ -33,7 +33,7 @@ Last update: 17 November 2022
 (i) rasterx**:  - optional: turn on the raster font and set its size to x and y
 (i) rastery**:  /
 
-*    uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+*    uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes; that means keyboard layouts do not matter, the physical location of keys is considered
 **   set those BEFORE you inject
 
 -- DiscordRpc ---
@@ -68,9 +68,10 @@ set discordsmallimgtxt=Small image Test
 inject discordrpc.dll
 
 === Notes ===
-The ".dll" files distributed to you most likely aren't actual .dll's.
-They are compressed DLLs and get unpacked with the injector. So don't try
-injecting them manually through ProcessExplorer or stuff like this.
+The ".dll" files distributed to you aren't actual .dll's.
+They are most likely compressed DLLs and get unpacked transparently, in memory within the injector. So do not try
+injecting them manually through ProcessExplorer or stuff like this, it won't work.
+Even if they would be uncompressed (which shouldn't really happen), they still have their own custom header.
 
 -- Injector --
 Return values:
@@ -94,6 +95,11 @@ Return values:
   - Some random fuckup/crash: Literally any other value
 
 *also makes messagebox telling you
+
+Injector command line:
+  inject [-force] filename.dll
+
+Force switch turns off error checking for cmd.exe being parent process.
 
 === Minimum system requirements ===
 OS:  Windows Vista x64

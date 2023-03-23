@@ -11,7 +11,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <shellscalingapi.h>
+//#include <shellscalingapi.h>
 #include <math.h>
 
 #include <stdbool.h>
@@ -137,6 +137,22 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
   COORD * fontSz = &info.dwFontSize;
   POINT pt;
 
+  OSVERSIONINFOEX osInfo = {
+  	.dwOSVersionInfoSize = sizeof (OSVERSIONINFOEX),
+  	.dwMajorVersion = 10
+  };
+
+	bool bWin10 = VerifyVersionInfoA(&osInfo, VER_MAJORVERSION, VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL));
+
+
+	HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int *) = NULL;
+	HRESULT(*SetProcessDpiAwarenessProc)(int) = NULL;
+
+	if(bWin10) {
+		GetScaleFactorForMonitorProc = GetProcAddress(GetModuleHandle("shcore.dll"), "GetScaleFactorForMonitor");
+		SetProcessDpiAwarenessProc = GetProcAddress(GetModuleHandle("shcore.dll"), "SetProcessDpiAwareness");
+	}
+
 	int rasterx = getenvnum("rasterx"),
 		rastery = getenvnum("rastery");
 
@@ -161,7 +177,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 
   HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
-	SetProcessDpiAwareness(DPI_AWARENESS_UNAWARE);
+	if(bWin10) SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
 
   MSG mouseMsg;
   int scale = 100, roundedScale, prevScale = 0;
@@ -176,7 +192,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 
 	SetConsoleMode(hIn, (~ENABLE_PROCESSED_INPUT) & (ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE)));
     GetCurrentConsoleFont(hOut, FALSE, &info);
-	GetScaleFactorForMonitor(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
+
+	if(bWin10) GetScaleFactorForMonitorProc(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
 
     GetPhysicalCursorPos(&pt);
     ScreenToClient(hCon,&pt);
@@ -189,9 +206,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
 		mouseclick |= mouseclick & 3;
 
-	if(prevScale != scale) {
+	if(bWin10 && prevScale != scale) {
 		// this somehow works, !!DO NOT TOUCH!!
-		if(!isRaster) fscalex = fscaley = (float)(scale) / 100.f;
+		if(!isRaster) fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
 		else {
 			roundedScale = (scale - 100 * (scale / 100));
 			if(roundedScale < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;

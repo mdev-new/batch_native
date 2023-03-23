@@ -9,7 +9,8 @@ if not exist bin\comptool.exe (
 ::-msse4.1 -mavx -mmmx -ftree-vectorize -ffast-math -ftree-slp-vectorize -fassociative-math
 set optargs=-Isrc -std=gnu99 -m64 -Os -flto -fno-pic -fno-pie -fno-plt -msse -mavx -mmmx -funsafe-math-optimizations -ftree-vectorize -ffast-math -ftree-slp-vectorize -fassociative-math -fvisibility=hidden -fcompare-debug-second -fno-exceptions -fno-stack-protector -fno-math-errno -fno-ident -fno-asynchronous-unwind-tables -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-s,--gc-sections,--reduce-memory-overheads,--no-seh,--disable-reloc-section,--build-id=none -DNDEBUG
 
-gcc -shared -o bin\getinput.dll src\getinput.c %optargs% -luser32 -lkernel32 -lshcore -lgdi32 -Wl,-e,DllMain
+windres --input src\resources\dll.rc --output bin\dll.res --output-format=coff
+gcc -shared -o bin\getinput.dll src\getinput.c bin\dll.res %optargs% -luser32 -lkernel32 -lshcore -lgdi32 -Wl,-e,DllMain
 
 if "%1"=="fullbuild" (
 	set sources= connection_win.cpp discord_register_win.cpp discord_rpc.cpp rpc_connection.cpp serialization.cpp

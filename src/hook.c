@@ -2,16 +2,23 @@
    "getinput.txt" document you recieved with this software.
 */
 
+#pragma GCC diagnostic ignored "-Wmultichar"
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winternl.h>
 #include <psapi.h>
 #include <shlwapi.h>
+#include <shellapi.h>
 #include "extern/lz77.h"
 
 #define SINFL_IMPLEMENTATION
 #include "extern/sinfl.h"
 #include "shared.h"
+
+// stolen from some random ass tutorial or yt video
+// and ported to x64
 
 typedef unsigned __int64 QWORD;
 
@@ -112,7 +119,7 @@ INT HookDll(HANDLE hProcess, LPVOID dllcode) {
   LoaderData loaderParams = {
     .imageBase = executableImage,
     .loadLibraryA = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA"),
-    .getProcAddress = GetProcAddress,
+    .getProcAddress = GetProcAddress(GetModuleHandle("kernel32.dll"), "GetProcAddress"),
     .rtlZeroMemory = (VOID(NTAPI*)(PVOID, SIZE_T))GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlZeroMemory")
   };
 
@@ -166,29 +173,43 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
+  int argc = 0, retcode = 0;
+  LPCWSTR *args = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+  if(argc <= 0) {
+    return ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS;
+  }
+
   TCHAR parentPath[MAX_PATH] = {0};
 
+  NTSTATUS(*NtQueryInformationProcessProc)(HANDLE, PROCESSINFOCLASS, void*, ULONG, ULONG*) = GetProcAddress(GetModuleHandle("ntdll.dll"), "NtQueryInformationProcess");
+  if(NtQueryInformationProcessProc == NULL) return ERROR_CANNOT_GET_PARENT_PROC;
+
   PROCESS_BASIC_INFORMATION ProcessInfo;
-  if (!NT_SUCCESS(NtQueryInformationProcess(GetCurrentProcess(), ProcessBasicInformation, &ProcessInfo, sizeof(ProcessInfo), NULL)))
+  if (!NT_SUCCESS(NtQueryInformationProcessProc(GetCurrentProcess(), ProcessBasicInformation, &ProcessInfo, sizeof(ProcessInfo), NULL)))
     return ERROR_CANNOT_GET_PARENT_PROC;
 
   HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, ProcessInfo.InheritedFromUniqueProcessId);
   if(hProcess == NULL) return ERROR_CANNOT_OPEN_PROCESS;
 
-  if(GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH) == 0) return ERROR_CANNOT_GET_PARENT_PROC_PATH;
-  if(lstrcmp("cmd.exe", parentPath + lstrlen(parentPath) - 7) != 0) {
-    MessageBox(0, "Parrent process must be cmd.exe!", "", MB_OK | MB_ICONINFORMATION);
-    return ERROR_NOT_CMDEXE;
+  // todo add force switch
+
+  BOOL bForce = FALSE;
+  if(lstrcmpW(args[1], L"-force") == 0) bForce = TRUE;
+
+  if(bForce == FALSE) {
+    if(GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH) == 0) return ERROR_CANNOT_GET_PARENT_PROC_PATH;
+    if(lstrcmp("cmd.exe", parentPath + lstrlen(parentPath) - 7) != 0) {
+      MessageBox(0, "Parrent process must be cmd.exe!", "", MB_OK | MB_ICONINFORMATION);
+      return ERROR_NOT_CMDEXE;
+    }
   }
 
   HANDLE hProcHeap = GetProcessHeap();
   if(hProcHeap == NULL) return ERROR_CANNOT_OPEN_HEAP;
 
-  int argc = 0, retcode = 0;
-  LPCWSTR *args = CommandLineToArgvW(GetCommandLineW(), &argc);
-
-  if(argc > 0 && PathFileExistsW(args[1]))
-    retcode = LoadAndHook(hProcHeap, hProcess, args[1]);
+  if(argc > 0 && PathFileExistsW(args[bForce? 2 : 1]))
+    retcode = LoadAndHook(hProcHeap, hProcess, args[bForce? 2 : 1]);
   else retcode = ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS;
 
   CloseHandle(hProcess);
