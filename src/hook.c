@@ -20,6 +20,8 @@
 // stolen from some random ass tutorial or yt video
 // and ported to x64
 
+// todo broken (atleast on win7)
+
 typedef unsigned __int64 QWORD;
 
 enum {
@@ -52,7 +54,6 @@ typedef struct {
 // not even gonna attempt to error check that
 // also this runs inside cmd.exe
 QWORD WINAPI loadLibrary(LoaderData* loaderData) {
-  MessageBox(NULL, "loadLibrary", "", MB_OK);
     PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)(loaderData->imageBase + ((PIMAGE_DOS_HEADER)loaderData->imageBase)->e_lfanew);
     PIMAGE_BASE_RELOCATION relocation = (PIMAGE_BASE_RELOCATION)(loaderData->imageBase + ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
     QWORD delta = (QWORD)(loaderData->imageBase - ntHeaders->OptionalHeader.ImageBase);
@@ -95,7 +96,7 @@ QWORD WINAPI loadLibrary(LoaderData* loaderData) {
             ((HMODULE)loaderData->imageBase, DLL_PROCESS_ATTACH, NULL);
 
         //loaderData->rtlZeroMemory(loaderData->imageBase + ntHeaders->OptionalHeader.AddressOfEntryPoint, 32);
-        loaderData->rtlZeroMemory(loaderData->imageBase, ntHeaders->OptionalHeader.SizeOfHeaders);
+        //loaderData->rtlZeroMemory(loaderData->imageBase, ntHeaders->OptionalHeader.SizeOfHeaders);
         return result;
     }
     return TRUE;
@@ -117,7 +118,7 @@ INT HookDll(HANDLE hProcess, LPVOID dllcode) {
         WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL)
       == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
 
-  LoaderData* loaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READ);
+  LoaderData* loaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   if(loaderMemory == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
 
   LoaderData loaderParams = {
@@ -148,7 +149,7 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
 	if(header->magic != MAGIC) return ERROR_INVALID_FILE;
 	int retcode = 0;
 
-	switch(header->compression & 0b11) {
+	switch(header->compression & 0b1111) {
 	case UNCOMPRESSED: HookDll(hProcess, buffer+header->sizeOfSelf); break;
 	case ALGO_LZ77: {
 		BYTE *decompBuffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, header->uncompressed_file_size+2);
@@ -202,7 +203,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
   if(bForce == FALSE) {
     if(GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH) == 0) return ERROR_CANNOT_GET_PARENT_PROC_PATH;
     if(lstrcmp("cmd.exe", parentPath + lstrlen(parentPath) - 7) != 0) {
-      MessageBox(0, "Parrent process must be cmd.exe!", "", MB_OK | MB_ICONINFORMATION);
+      MessageBox(0, "Parrent process must be cmd.exe!", "Error", MB_OK | MB_ICONINFORMATION);
       return ERROR_NOT_CMDEXE;
     }
   }
@@ -210,10 +211,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
   HANDLE hProcHeap = GetProcessHeap();
   if(hProcHeap == NULL) return ERROR_CANNOT_OPEN_HEAP;
 
-  if(PathFileExistsW(args[bForce? 2 : 1])) {
-    MessageBoxW(NULL, args[bForce? 2 : 1], L"loading file", MB_OK);
+  if(PathFileExistsW(args[bForce? 2 : 1]))
     retcode = LoadAndHook(hProcHeap, hProcess, args[bForce? 2 : 1]);
-  }
   else retcode = ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS;
 
   CloseHandle(hProcess);
