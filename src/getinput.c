@@ -36,8 +36,8 @@ PCHAR GETINPUT_SUB itoa_(i,x) {
   return c;
 }
 
-int GETINPUT_SUB ma_ceil(double num)
-{   int a = num;
+int GETINPUT_SUB ma_ceil(double num) {
+	int a = num;
     if ((double)a != num)
         return a+1;
     return a;
@@ -46,7 +46,7 @@ int GETINPUT_SUB ma_ceil(double num)
 #define isdigit(x) (x >= '0' && x <= '9' ? 1 : 0)
 long GETINPUT_SUB atol(const char *num) {
 	long value = 0, neg = 0;
-	if (num[0] == '-') { neg = 1; num++; }
+	if (num[0] == '-') { neg = 1; ++num; }
 	while (*num && isdigit(*num)) value = value * 10 + *num++  - '0';
 	return neg? -value : value;
 }
@@ -83,7 +83,7 @@ VOID GETINPUT_SUB process_keys() {
   int isAnyKeyDown = 0, actionHappened = 0;
   BOOL state = 0;
 
-  for(int i = 3; i < 0x100; i++) {
+  for(int i = 3; i < 0x100; ++i) {
     state = GetAsyncKeyState(i);
     // todo optimize
     if (!m[i] && state & 0x8000) { m[i] = TRUE; actionHappened = TRUE; }
@@ -96,7 +96,7 @@ VOID GETINPUT_SUB process_keys() {
   if(!isAnyKeyDown) {SetEnvironmentVariable("keyspressed", NULL); return;} // this DOES work
   ZeroMemory(buffer, 0x300);
 
-  for(int i = 0; i < 0x100; i++) {
+  for(int i = 0; i < 0x100; ++i) {
     if(m[i]) {
       int num = conversion_table[i];
       if(num != (BYTE)(-1)) {
@@ -137,26 +137,27 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
   COORD * fontSz = &info.dwFontSize;
   POINT pt;
 
-  OSVERSIONINFOEX osInfo = {
-  	.dwOSVersionInfoSize = sizeof (OSVERSIONINFOEX),
-  	.dwMajorVersion = 10
-  };
+  RTL_OSVERSIONINFOW osVersionInfo = {0};
+  osVersionInfo.dwOSVersionInfoSize = sizeof (RTL_OSVERSIONINFOW);
 
-	bool bWin10 = VerifyVersionInfoA(&osInfo, VER_MAJORVERSION, VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL));
+  // ntdll.dll
+  RtlGetVersion(&osVersionInfo);
+	bool bWin10 = osVersionInfo.dwMajorVersion >= 10;
 
-
-	HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int *) = NULL;
+  HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int *) = NULL;
 	HRESULT(*SetProcessDpiAwarenessProc)(int) = NULL;
 
 	if(bWin10) {
-		GetScaleFactorForMonitorProc = GetProcAddress(GetModuleHandle("shcore.dll"), "GetScaleFactorForMonitor");
-		SetProcessDpiAwarenessProc = GetProcAddress(GetModuleHandle("shcore.dll"), "SetProcessDpiAwareness");
+		HANDLE shcore = GetModuleHandle("shcore.dll");
+		GetScaleFactorForMonitorProc = GetProcAddress(shcore, "GetScaleFactorForMonitor");
+		SetProcessDpiAwarenessProc = GetProcAddress(shcore, "SetProcessDpiAwareness");
+		CloseHandle(shcore);
 	}
 
 	int rasterx = getenvnum("rasterx"),
 		rastery = getenvnum("rastery");
 
-	const bool isRaster = rasterx && rastery;
+	bool isRaster = rasterx && rastery;
 
 	if(isRaster) {
 		CONSOLE_FONT_INFOEX cfi = {
@@ -180,17 +181,22 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	if(bWin10) SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
 
   MSG mouseMsg;
-  int scale = 100, roundedScale, prevScale = 0;
-	register float fscalex, fscaley;
+  int scale = 100, prevScale = scale, roundedScale;
+	register float fscalex = 1.0, fscaley = fscalex;
 
 	char counter = 0;
+
+  DWORD mode = 0;
+  GetConsoleMode(hIn, &mode);
+  mode &= ~ENABLE_PROCESSED_INPUT;
+  mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
 
   while(TRUE) {
 	Sleep(1000 / 125);
 	PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
 	if(((++counter) % 5) != 0) continue;
 
-	SetConsoleMode(hIn, (~ENABLE_PROCESSED_INPUT) & (ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE)));
+	SetConsoleMode(hIn, mode);
     GetCurrentConsoleFont(hOut, FALSE, &info);
 
 	if(bWin10) GetScaleFactorForMonitorProc(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
@@ -236,7 +242,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
   if (dwReason == DLL_PROCESS_ATTACH) {
 	  DisableThreadLibraryCalls(hInst);
-    CloseHandle(CreateThreadS(Process));
+    CreateThreadS(Process);
   }
   return TRUE;
 }

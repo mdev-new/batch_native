@@ -1,4 +1,5 @@
 #undef UNICODE
+#define WIN32_LEAN_AND_MEAN
 
 #include <stdint.h>
 #include <stdio.h>
@@ -10,7 +11,7 @@
 #include "discord_rpc.h"
 
 #include <Windows.h>
-#include <mutex>
+#include <atomic>
 
 char *readenv(const char *name) {
 	static TCHAR buffer[127];
@@ -18,15 +19,11 @@ char *readenv(const char *name) {
 	return strdup(buffer); // memory leaks go brr
 }
 
-volatile BOOL shouldShutdown = FALSE;
-std::mutex m;
+std::atomic<bool> shouldShutdown = FALSE;
 
 BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 	if(dwCtrlType >= 1 && dwCtrlType <= 6) {
-		m.lock();
-		shouldShutdown = TRUE;
-		m.unlock();
-		Sleep(550); // possibly let the last loop run
+		shouldShutdown = true;
 	}
 	return TRUE;
 }
@@ -64,9 +61,7 @@ DWORD Process() {
 			Discord_UpdatePresence(&discordPresence);
 		}
 
-		m.lock();
 		if(shouldShutdown == TRUE) break;
-		m.unlock();
 
 		Discord_UpdateConnection();
 		Sleep(500);

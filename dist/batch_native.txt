@@ -37,14 +37,14 @@ Last update: 23rd of March 2023
 **   set those BEFORE you inject
 
 -- DiscordRpc ---
-(i) discordappid - your own app id (created on the discord developer portal)
-(io)discordupdate - set this to anything when updating the rpc; gets nulled on update
-(i) discordstate - state (for example "Editing main.c")
-(i) discorddetails - details (for example "Line 50; column 100")
-(i) discordlargeimg - name of the asset that gets used as the large image
-(i) discordlargeimgtxt - text when user mouses over the large image
-(i) discordsmallimg - name of the asset that gets used as the small image
-(i) discordsmallimgtxt - text when user mouses over the small image
+(i)  discordappid - your own app id (created on the discord developer portal)
+(io) discordupdate - set this to anything when updating the rpc; gets nulled on update
+(i)  discordstate - state (for example "Editing main.c")
+(i)  discorddetails - details (for example "Line 50; column 100")
+(i)  discordlargeimg - name of the asset that gets used as the large image
+(i)  discordlargeimgtxt - text when user mouses over the large image
+(i)  discordsmallimg - name of the asset that gets used as the small image
+(i)  discordsmallimgtxt - text when user mouses over the small image
 
 i=in,o=out
 
