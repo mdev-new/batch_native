@@ -3,7 +3,7 @@
 ============================================
 
 Written by MousieDev & Kenan238
-Last update: 23rd of March 2023
+Last update: 2nd of April, 2023
 
 === Table of contents ===
 => Features
@@ -110,7 +110,7 @@ Kenan238  - original getinput.exe
 MousieDev - extensive rewrite, making it a dll, main maintainer
 
 === License ===
-Copyright (C) 2021-2022 MousieDev and Kenan238.  All rights reserved.
+Copyright (C) 2021-2023 MousieDev and Kenan238.  All rights reserved.
 The files you recieved are not 'free' or 'public domain'. They are copyrighted
 material.
 

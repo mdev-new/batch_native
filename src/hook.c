@@ -113,10 +113,17 @@ INT HookDll(HANDLE hProcess, LPVOID dllcode) {
   if(WriteProcessMemory(hProcess, executableImage, dllcode, ntHeaders->OptionalHeader.SizeOfHeaders, NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
 
   PIMAGE_SECTION_HEADER sectionHeaders = (PIMAGE_SECTION_HEADER)(ntHeaders + 1);
-  for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
-      if(
-        WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL)
-      == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
+  for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
+  		// this is weird. printf doesnt print however return does return.
+  	// i have no idea whats going on
+  	// the compiler is on -Og and still optimizes away this branch????
+  	// seems like error checking brings more harm than good
+      //if(
+        WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL);
+      //== 0) printf("%d\n", GetLastError());
+    }
+
+  //MessageBox(NULL, "before virtualalloce", "", 0);
 
   LoaderData* loaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   if(loaderMemory == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
