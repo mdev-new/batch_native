@@ -15,7 +15,7 @@ if "%1"=="fullbuild" (
 
 for %%a in (getinput discordrpc) do (
 	strip --strip-unneeded -s -R .comment -R .gnu.version -R .note bin\%%a.dll
-	bin\comptool bin\%%a.dll dist\%%a.dll
+	bin\comptool 2 bin\%%a.dll dist\%%a.dll
 )
 
 if "%1"=="fullbuild" (
