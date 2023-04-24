@@ -110,19 +110,10 @@ Kenan238  - original getinput.exe
 MousieDev - extensive rewrite, making it a dll, main maintainer
 
 === License ===
-Copyright (C) 2021-2023 MousieDev and Kenan238.  All rights reserved.
-The files you recieved are not 'free' or 'public domain'. They are copyrighted
-material.
+Copyright (C) 2021-2023 batch_native authors.  All rights reserved.
 
-By "Binaries" it is meant the files you recieved that are able to be executed
-on a computer and are not readable through regular text editor and/or word processor.
-
-You may not use, copy or modify or distribute any of the files you recieved
-with this software unless given writen permission from copyright holders.
-
-You may not disassemble, decompile or by any other means alter with the
-supplied Binaries. We do not and will not distribute any information 
-regarding building the final Binaries distributed to you.
+Do whatever with it as long as your forks are public. Making an pull request
+to the original repo would be appreciated.
 
 We do reserve the right to alter this document at any time without any prior
 notice. You may not alter this statement.
