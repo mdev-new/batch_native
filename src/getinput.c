@@ -23,6 +23,9 @@
 
 #define GETINPUT_SUB __attribute__((noinline))
 
+#define str(x) #x
+#define DbgMsgBox(msg) MessageBoxA(NULL, msg, "DbgMsgBox" str(__COUNTER__), MB_ICONWARNING | MB_OK)
+
 // i am too lazy lmfao
 #define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
 #define ENV SetEnvironmentVariable
@@ -32,13 +35,14 @@ signed wheelDelta = 0;
 BYTE b[21] = {0}, *c;
 PCHAR GETINPUT_SUB itoa_(i,x) {
   c=b+20,x=abs(i);
-  do *--c = 48 + x % 10; while(x && (x/=10)); if(i<0) *--c = 45;
+  do *--c = 48 + x % 10; while(x && (x/=10));
+  if(i<0) *--c = 45;
   return c;
 }
 
-int GETINPUT_SUB ma_ceil(double num) {
+int GETINPUT_SUB ma_ceil(float num) {
 	int a = num;
-    if ((double)a != num)
+    if ((float)a != num)
         return a+1;
     return a;
 }
@@ -157,7 +161,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	int rasterx = getenvnum("rasterx"),
 		rastery = getenvnum("rastery");
 
-	bool isRaster = rasterx && rastery;
+	const bool isRaster = rasterx && rastery;
 
 	if(isRaster) {
 		CONSOLE_FONT_INFOEX cfi = {
@@ -171,6 +175,19 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 		SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 	}
 
+//	int screenx = getenvnum("screenx"),
+//		screeny = getenvnum("screeny");
+//
+//	if(screenx && screeny) {
+//		SetConsoleScreenBufferSize(hOut, ((COORD){ screenx, screeny }));
+//		SetConsoleWindowInfo(hOut, FALSE, &((SMALL_RECT){ 0, 0, screenx - 1, screeny - 1 }));
+//	}
+
+  int lmx = getenvnum("limitMouseX"),
+      lmy = getenvnum("limitMouseY");
+
+  const bool bLimit = lmx && lmy;
+
 	if(getenvnum("noresize") == 1) {
 		DWORD style = GetWindowLong(hCon, GWL_STYLE);
 		SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
@@ -183,6 +200,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
   MSG mouseMsg;
   int scale = 100, prevScale = scale, roundedScale;
 	register float fscalex = 1.0, fscaley = fscalex;
+  register int mousx, mousy;
 
 	char counter = 0;
 
@@ -227,10 +245,12 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 		prevScale = scale;
 	}
 
-	// todo maybe completely vectorize
-	// or convert completely to integer operations
-    ENV("mousexpos", itoa_(ma_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f)));
-    ENV("mouseypos", itoa_(ma_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f)));
+  // this would get messy
+  mousx = ma_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f),
+  mousy = ma_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
+
+    ENV("mousexpos", (!bLimit || (bLimit && mousx <= lmx)) ? itoa_(mousx) : NULL);
+    ENV("mouseypos", (!bLimit || (bLimit && mousy <= lmy)) ? itoa_(mousy) : NULL);
 
     if(hCon == GetForegroundWindow()) {
       ENV("click", itoa_(mouseclick));
@@ -240,6 +260,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 }
 
 BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
+  //DbgMsgBox("running!");
   if (dwReason == DLL_PROCESS_ATTACH) {
 	  DisableThreadLibraryCalls(hInst);
     CreateThreadS(Process);

@@ -116,7 +116,7 @@ INT HookDll(HANDLE hProcess, LPVOID dllcode) {
   for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
   		// this is weird. printf doesnt print however return does return.
   	// i have no idea whats going on
-  	// the compiler is on -Og and still optimizes away this branch????
+  	// the compiler even in -Og still optimizes away this branch????
   	// seems like error checking brings more harm than good
       //if(
         WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL);
@@ -137,6 +137,9 @@ INT HookDll(HANDLE hProcess, LPVOID dllcode) {
 
   if(WriteProcessMemory(hProcess, loaderMemory, &loaderParams, sizeof(LoaderData), NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
   if(WriteProcessMemory(hProcess, loaderMemory + 1, loadLibrary, (QWORD)stub - (QWORD)loadLibrary, NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
+
+  //MessageBox(NULL, "about to run loadLibrary", "warn", 0);
+
   WaitForSingleObject(CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)(loaderMemory + 1), loaderMemory, 0, NULL), INFINITE);
   if(!VirtualFreeEx(hProcess, loaderMemory, 0, MEM_RELEASE)) return ERROR_CANNOT_VIRTUAL_FREE;
 }
@@ -151,6 +154,11 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
 
   BYTE *buffer = HeapAlloc(hProcHeap, HEAP_ZERO_MEMORY, fileSize);
   if(!ReadFile(hFile, buffer, fileSize, &numOfBytesRead, NULL)) return ERROR_CANNOT_READ_FILE;
+
+  if(buffer[0] == 'M' && buffer[1] == 'Z') {
+    MessageBox(NULL, "Injector doesn't accept plain PE DLL files.", "You should've read the documentation!", MB_ICONWARNING | MB_OK);
+    return ERROR_INVALID_FILE;
+  }
 
 	Header *header = (Header *)buffer;
 	if(header->magic != MAGIC) return ERROR_INVALID_FILE;
@@ -186,11 +194,16 @@ INT LoadAndHook(HANDLE hProcHeap, HANDLE hProcess, LPCWSTR name) {
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
   int argc = 0, retcode = 0;
+  BOOL bForce = FALSE;
   LPCWSTR *args = CommandLineToArgvW(GetCommandLineW(), &argc);
 
-  if(argc <= 0) {
+  if(argc < 1) {
     return ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS;
   }
+
+  if(lstrcmpW(args[1], L"-force") == 0) bForce = TRUE;
+
+  if(bForce && argc < 2) return ERROR_FILE_DOESNT_EXIST_OR_INVALID_ARGS;
 
   TCHAR parentPath[MAX_PATH] = {0};
 
@@ -203,9 +216,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
   HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, ProcessInfo.InheritedFromUniqueProcessId);
   if(hProcess == NULL) return ERROR_CANNOT_OPEN_PROCESS;
-
-  BOOL bForce = FALSE;
-  if(lstrcmpW(args[1], L"-force") == 0) bForce = TRUE;
 
   if(bForce == FALSE) {
     if(GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH) == 0) return ERROR_CANNOT_GET_PARENT_PROC_PATH;
