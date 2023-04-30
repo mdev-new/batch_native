@@ -3,7 +3,7 @@
 ============================================
 
 Written by MousieDev & Kenan238
-Last update: 2nd of April, 2023
+Last update: 30th of April, 2023
 
 === Table of contents ===
 => Features
@@ -26,15 +26,18 @@ Last update: 2nd of April, 2023
 -- GetInput --
 (o) keyspressed*: is formatted like this: -keycode1-keycode2-keycode3-
 (o) click: left=1,right=2
-(o) wheeldelta***: up=-1,down=1 ; reset this manually once you process
+(o) wheeldelta: up=-1,down=1 ; reset this manually once you process
 (o) mousexpos: - measured in cells
 (o) mouseypos: - measured in cells
-(i) noresize**: 1 to disable resizing
-(i) rasterx**:  - optional: turn on the raster font and set its size to x and y
-(i) rastery**:  /
+(i) noresize: 1 to disable resizing
+(i) rasterx:  - optional: turn on the raster font and set its size to x and y
+(i) rastery:  /
+(i) limitMouseX: limit the x range of mouse, unsets mousexpos if out of range (range is 0-limitMouseX; inclusive)
+(i) limitMouseY: limit the y range of mouse, unsets mouseypos if out of range (range is 0-limitMouseY; inclusive)
+
+All input variables are *optional* and must be set before injecting.
 
 *    uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes; that means keyboard layouts do not matter, the physical location of keys is considered
-**   set those BEFORE you inject
 
 -- DiscordRpc ---
 (i)  discordappid - your own app id (created on the discord developer portal)
@@ -69,8 +72,9 @@ inject discordrpc.dll
 
 === Notes ===
 The ".dll" files distributed to you aren't actual .dll's.
-They are most likely compressed DLLs and get unpacked transparently, in memory within the injector. So do not try
+They are compressed DLLs and get unpacked transparently, entirely in memory within the injector. So do not try
 injecting them manually through ProcessExplorer or stuff like this, it won't work.
+Also do not try injecting plain DLL files through the injector.
 Even if they would be uncompressed (which shouldn't really happen), they still have their own custom header.
 
 -- Injector --
