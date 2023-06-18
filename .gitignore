@@ -4,3 +4,5 @@ dist/*.exe
 src/extern/*.o
 src/extern/*.obj
 dist/*.dll
+*.dll
+*.exe

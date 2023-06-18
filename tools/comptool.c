@@ -36,12 +36,12 @@ int main(int argc, char *argv[]) {
 	FILE *fptr_r = fopen(argv[2], "rb");
 	FILE *fptr_w = fopen(argv[3], "wb");
 
-    fseek(fptr_r, 0, SEEK_END);
-    int inlen = ftell(fptr_r);
-    fseek(fptr_r, 0, SEEK_SET);
+	fseek(fptr_r, 0, SEEK_END);
+	int inlen = ftell(fptr_r);
+	fseek(fptr_r, 0, SEEK_SET);
 
-	char *inBuffer = malloc(inlen);
-	char *outBuffer = malloc(inlen*2 + sizeof(Header));
+	char *inBuffer = alloca(inlen);
+	char *outBuffer = alloca(inlen*4 + sizeof(Header));
 	fread(inBuffer, inlen, 1, fptr_r);
 
 	Header header = {
@@ -52,18 +52,14 @@ int main(int argc, char *argv[]) {
 		.uncompressed_file_size = inlen
 	};
 
-	//printf("%d\n", header.compression);
-
 	// write the footer
-    memcpy(outBuffer, &header, sizeof(Header));
+	memcpy(outBuffer, &header, sizeof(Header));
 
 	int res = compressPtr(inBuffer, outBuffer+sizeof(Header), inlen);
 	fwrite(outBuffer,res+sizeof(Header), 1, fptr_w);
 
-	free(inBuffer);
-	free(outBuffer);
 	fclose(fptr_r);
 	fclose(fptr_w);
 
-	return res;
+	return 0;
 }

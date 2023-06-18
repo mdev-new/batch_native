@@ -19,6 +19,8 @@ Last update: 30th of April, 2023
 - Mouse and keyboard polling
  - Multiple keys down at once support
 - Discord RPC
+- Map renderer
+ - Character based
 - Easy to setup in existing or new projects
 - Small size (depends on chosen modules)
 
@@ -76,6 +78,7 @@ They are compressed DLLs and get unpacked transparently, entirely in memory with
 injecting them manually through ProcessExplorer or stuff like this, it won't work.
 Also do not try injecting plain DLL files through the injector.
 Even if they would be uncompressed (which shouldn't really happen), they still have their own custom header.
+Injector checks for plain dll's and refuses to load them, giving you a error code and a message box.
 
 -- Injector --
 Return values:

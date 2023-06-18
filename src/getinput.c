@@ -6,7 +6,7 @@
  * Big big rewrite by mousiedev
  *
  * Licensed under conditions stated in the
-   "getinput.txt" document you recieved with this software.
+	 "getinput.txt" document you recieved with this software.
  */
 
 #define WIN32_LEAN_AND_MEAN
@@ -34,32 +34,53 @@ signed wheelDelta = 0;
 
 BYTE b[21] = {0}, *c;
 PCHAR GETINPUT_SUB itoa_(i,x) {
-  c=b+20,x=abs(i);
-  do *--c = 48 + x % 10; while(x && (x/=10));
-  if(i<0) *--c = 45;
-  return c;
+	c = b+20, x = abs(i);
+
+	do {
+		*--c = 48 + x % 10;
+	} while(x && (x/=10));
+
+	if(i < 0) *--c = 45;
+	return c;
 }
 
 int GETINPUT_SUB ma_ceil(float num) {
 	int a = num;
-    if ((float)a != num)
-        return a+1;
-    return a;
+	if ((float)a != num) {
+		return a+1;
+	}
+
+	return a;
 }
 
 #define isdigit(x) (x >= '0' && x <= '9' ? 1 : 0)
 long GETINPUT_SUB atol(const char *num) {
-	long value = 0, neg = 0;
-	if (num[0] == '-') { neg = 1; ++num; }
-	while (*num && isdigit(*num)) value = value * 10 + *num++  - '0';
+	long value = 0;
+	bool neg = 0;
+	if (num[0] == '-') {
+		neg = 1;
+		++num;
+	}
+
+	while (*num && isdigit(*num)) {
+		value = (value * 10) + (*num++ - '0');
+	}
+
 	return neg? -value : value;
 }
 
 long GETINPUT_SUB getenvnum(char *name) {
 	static char buffer[32] = {0};
-	return GetEnvironmentVariable(name, buffer, sizeof(buffer))? atol(buffer) : 0;
+	return
+		GetEnvironmentVariable(name, buffer, sizeof(buffer))
+		? atol(buffer)
+		: 0;
 }
 
+// i was way too lazy to check for values individually
+// so i just made this
+// this technically disallows key code 0xFF but once that becomes a problem
+// i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
 BYTE conversion_table[] = {
 //       0     1     2     3     4     5     6     7     8     9     A     B     C     D     E     F
 /* 0 */  -1  , -1  , 0x02, 0x03, -1  , -1  , -1  , 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, // exclude mouse buttons
@@ -84,75 +105,81 @@ BYTE m[0x100] = {0};
 char buffer[0x300] = {0};
 /* TODO optimize */
 VOID GETINPUT_SUB process_keys() {
-  int isAnyKeyDown = 0, actionHappened = 0;
-  BOOL state = 0;
+	int isAnyKeyDown = 0, actionHappened = 0;
+	BOOL state = 0;
 
-  for(int i = 3; i < 0x100; ++i) {
-    state = GetAsyncKeyState(i);
-    // todo optimize
-    if (!m[i] && state & 0x8000) { m[i] = TRUE; actionHappened = TRUE; }
-    if (m[i] && !state) { m[i] = FALSE; actionHappened = TRUE; }
+	for(int i = 3; i < 0x100; ++i) {
+		state = GetAsyncKeyState(i);
+		// todo optimize
+		if (!m[i] && state & 0x8000) { m[i] = TRUE; actionHappened = TRUE; }
+		if (m[i] && !state) { m[i] = FALSE; actionHappened = TRUE; }
 
-    isAnyKeyDown |= m[i];
-  }
+		isAnyKeyDown |= m[i];
+	}
 
-  if(!actionHappened) return;
-  if(!isAnyKeyDown) {SetEnvironmentVariable("keyspressed", NULL); return;} // this DOES work
-  ZeroMemory(buffer, 0x300);
+	if(!actionHappened) return;
+	if(!isAnyKeyDown) {
+		SetEnvironmentVariable("keyspressed", NULL);
+		return;
+	}
 
-  for(int i = 0; i < 0x100; ++i) {
-    if(m[i]) {
-      int num = conversion_table[i];
-      if(num != (BYTE)(-1)) {
-		if(buffer[0] == 0) {
-			buffer[0] = '-';
-#ifdef IS_YESHI_ANNOYING_AGAIN
-			ENV("keypressed", itoa_(num));
+	ZeroMemory(buffer, 0x300);
+
+	for(int i = 0; i < 0x100; ++i) {
+		if(m[i]) {
+			int num = conversion_table[i];
+			if(num != (BYTE)(-1)) {
+				if(buffer[0] == 0) {
+					buffer[0] = '-';
+#ifdef IS_YESHI_ANNOYING_AGAIN // never was defined and never will
+					ENV("keypressed", itoa_(num));
 #endif
-		}
-        	lstrcat(buffer, itoa_(num));
-        	lstrcat(buffer, "-");
-      }
-    }
-  }
+				}
 
-  SetEnvironmentVariable("keyspressed",buffer);
+				lstrcat(buffer, itoa_(num));
+				lstrcat(buffer, "-");
+			}
+		}
+	}
+
+	SetEnvironmentVariable("keyspressed",buffer);
 }
 
 LRESULT GETINPUT_SUB CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-  MSLLHOOKSTRUCT *info = (MSLLHOOKSTRUCT *)lParam;
-  wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
-  if (wheelDelta != 0) {
-	wheelDelta /= WHEEL_DELTA;
-	ENV("wheeldelta", itoa_(wheelDelta));
-  }
-  return CallNextHookEx(NULL, nCode, wParam, lParam);
+	MSLLHOOKSTRUCT *info = (MSLLHOOKSTRUCT *)lParam;
+	wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
+	if (wheelDelta != 0) {
+		wheelDelta /= WHEEL_DELTA;
+		ENV("wheeldelta", itoa_(wheelDelta));
+	}
+
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void *data) {
-  HANDLE 
-    hOut = GetStdHandle(STD_OUTPUT_HANDLE),
-    hIn = GetStdHandle(STD_INPUT_HANDLE);
-  HWND hCon = GetConsoleWindow();
+	HANDLE 
+	hOut = GetStdHandle(STD_OUTPUT_HANDLE),
+	hIn = GetStdHandle(STD_INPUT_HANDLE);
+	HWND hCon = GetConsoleWindow();
 
-  BYTE mouseclick;
-  
-  CONSOLE_FONT_INFO info;
-  COORD * fontSz = &info.dwFontSize;
-  POINT pt;
+	BYTE mouseclick;
+	
+	CONSOLE_FONT_INFO info;
+	COORD * fontSz = &info.dwFontSize;
+	POINT pt;
 
-  RTL_OSVERSIONINFOW osVersionInfo = {0};
-  osVersionInfo.dwOSVersionInfoSize = sizeof (RTL_OSVERSIONINFOW);
+	RTL_OSVERSIONINFOW osVersionInfo = {0};
+	osVersionInfo.dwOSVersionInfoSize = sizeof (RTL_OSVERSIONINFOW);
 
-  // ntdll.dll
-  RtlGetVersion(&osVersionInfo);
+	// ntdll.dll
+	RtlGetVersion(&osVersionInfo);
 	bool bWin10 = osVersionInfo.dwMajorVersion >= 10;
 
-  HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int *) = NULL;
+	HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int *) = NULL;
 	HRESULT(*SetProcessDpiAwarenessProc)(int) = NULL;
 
 	if(bWin10) {
-		HANDLE shcore = GetModuleHandle("shcore.dll");
+		HANDLE shcore = LoadLibraryA("shcore.dll");
 		GetScaleFactorForMonitorProc = GetProcAddress(shcore, "GetScaleFactorForMonitor");
 		SetProcessDpiAwarenessProc = GetProcAddress(shcore, "SetProcessDpiAwareness");
 		CloseHandle(shcore);
@@ -172,98 +199,95 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 			.FontWeight = FW_NORMAL,
 			.FaceName = L"Terminal"
 		};
+
 		SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 	}
 
-//	int screenx = getenvnum("screenx"),
-//		screeny = getenvnum("screeny");
-//
-//	if(screenx && screeny) {
-//		SetConsoleScreenBufferSize(hOut, ((COORD){ screenx, screeny }));
-//		SetConsoleWindowInfo(hOut, FALSE, &((SMALL_RECT){ 0, 0, screenx - 1, screeny - 1 }));
-//	}
+	int lmx = getenvnum("limitMouseX"),
+		lmy = getenvnum("limitMouseY");
 
-  int lmx = getenvnum("limitMouseX"),
-      lmy = getenvnum("limitMouseY");
-
-  const bool bLimit = lmx && lmy;
+	const bool bLimit = lmx && lmy;
 
 	if(getenvnum("noresize") == 1) {
 		DWORD style = GetWindowLong(hCon, GWL_STYLE);
 		SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
 	}
 
-  HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
+	HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
-	if(bWin10) SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
+	if(bWin10) {
+		SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
+	}
 
-  MSG mouseMsg;
-  int scale = 100, prevScale = scale, roundedScale;
+	MSG mouseMsg;
+	int scale = 100, prevScale = scale, roundedScale;
 	register float fscalex = 1.0, fscaley = fscalex;
-  register int mousx, mousy;
+	register int mousx, mousy;
 
 	char counter = 0;
 
-  DWORD mode = 0;
-  GetConsoleMode(hIn, &mode);
-  mode &= ~ENABLE_PROCESSED_INPUT;
-  mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
+	DWORD mode = 0;
+	GetConsoleMode(hIn, &mode);
+	mode &= ~ENABLE_PROCESSED_INPUT;
+	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
 
-  while(TRUE) {
-	Sleep(1000 / 125);
-	PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
-	if(((++counter) % 5) != 0) continue;
+	while(TRUE) {
+		Sleep(1000 / 125);
+		PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
+		if(((++counter) % 5) != 0) continue;
 
-	SetConsoleMode(hIn, mode);
-    GetCurrentConsoleFont(hOut, FALSE, &info);
+		SetConsoleMode(hIn, mode);
+		GetCurrentConsoleFont(hOut, FALSE, &info);
 
-	if(bWin10) GetScaleFactorForMonitorProc(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
+		if(bWin10) GetScaleFactorForMonitorProc(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
 
-    GetPhysicalCursorPos(&pt);
-    ScreenToClient(hCon,&pt);
+		GetPhysicalCursorPos(&pt);
+		ScreenToClient(hCon,&pt);
 
-    mouseclick = 
-		(GetKeyState(VK_LBUTTON) & 0x80) >> 7 |
-		(GetKeyState(VK_RBUTTON) & 0x80) >> 6 |
-		(GetKeyState(VK_MBUTTON) & 0x80) >> 5;
+		mouseclick = 
+			(GetKeyState(VK_LBUTTON) & 0x80) >> 7 |
+			(GetKeyState(VK_RBUTTON) & 0x80) >> 6 |
+			(GetKeyState(VK_MBUTTON) & 0x80) >> 5;
 
-	if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON))
-		mouseclick |= mouseclick & 3;
-
-	if(bWin10 && prevScale != scale) {
-		// this somehow works, !!DO NOT TOUCH!!
-		if(!isRaster) fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
-		else {
-			roundedScale = (scale - 100 * (scale / 100));
-			if(roundedScale < 50) fscalex = fscaley = ((scale + 50) * 100) / 10000L;
-			else if(roundedScale > 50 && scale % 100 != 0) {
-				fscalex = (scale / 100L) + 1.f;
-				fscaley = (float)(scale - scale % 50) / 100.f;
-			}
+		if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON)) {
+			mouseclick |= mouseclick & 3;
 		}
 
-		prevScale = scale;
+		if(bWin10 && prevScale != scale) {
+			// this somehow works, !!DO NOT TOUCH!!
+			if(!isRaster) fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
+			else {
+				roundedScale = (scale - 100 * (scale / 100));
+				if(roundedScale < 50) {
+					fscalex = fscaley = ((scale + 50) * 100) / 10000L;
+				} else if(roundedScale > 50 && scale % 100 != 0) {
+					fscalex = (scale / 100L) + 1.f;
+					fscaley = (float)(scale - scale % 50) / 100.f;
+				}
+			}
+
+			prevScale = scale;
+		}
+
+		// this would get messy
+		mousx = ma_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f);
+		mousy = ma_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
+
+		ENV("mousexpos", (!bLimit || (bLimit && mousx <= lmx)) ? itoa_(mousx) : NULL);
+		ENV("mouseypos", (!bLimit || (bLimit && mousy <= lmy)) ? itoa_(mousy) : NULL);
+
+		if(hCon == GetForegroundWindow()) {
+			ENV("click", itoa_(mouseclick));
+			process_keys();
+		}
 	}
-
-  // this would get messy
-  mousx = ma_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f),
-  mousy = ma_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
-
-    ENV("mousexpos", (!bLimit || (bLimit && mousx <= lmx)) ? itoa_(mousx) : NULL);
-    ENV("mouseypos", (!bLimit || (bLimit && mousy <= lmy)) ? itoa_(mousy) : NULL);
-
-    if(hCon == GetForegroundWindow()) {
-      ENV("click", itoa_(mouseclick));
-      process_keys();
-    }
-  }
 }
 
 BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-  //DbgMsgBox("running!");
-  if (dwReason == DLL_PROCESS_ATTACH) {
-	  DisableThreadLibraryCalls(hInst);
-    CreateThreadS(Process);
-  }
-  return TRUE;
+	DbgMsgBox("running!");
+	if (dwReason == DLL_PROCESS_ATTACH) {
+		DisableThreadLibraryCalls(hInst);
+		CreateThreadS(Process);
+	}
+	return TRUE;
 }
