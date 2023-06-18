@@ -3,6 +3,8 @@ setlocal enableextensions enabledelayedexpansion
 
 :: someone please fix this build system
 
+if not exist bin mkdir bin
+
 if not exist bin\comptool.exe call :recompileTool
 if "%1"=="fullbuild" call :recompileTool
 
@@ -23,7 +25,7 @@ if "%1"=="fullbuild" (
 
 for %%a in (getinput discordrpc map_rndr) do (
 	strip --strip-unneeded -s -R .comment -R .gnu.version -R .note bin\%%a.dll
-	bin\comptool 2 bin\%%a.dll dist\%%a.dll
+	dist\devel\comptool 2 bin\%%a.dll dist\%%a.dll
 )
 
 %= This also doesn't have to build every time =%
@@ -36,8 +38,8 @@ if "%1"=="fullbuild" (
 exit /b
 
 :recompileTool
-mkdir bin
-gcc -pipe -Os -flto -s -o bin\comptool.exe tools\comptool.c
+if not exist dist\devel mkdir dist\devel
+gcc -pipe -Os -flto -s -o dist\devel\comptool.exe tools\comptool.c
 exit /b
 
 :compile_C_Dll

@@ -3,7 +3,7 @@
 ============================================
 
 Written by MousieDev & Kenan238
-Last update: 30th of April, 2023
+Last update: 18th of June, 2023
 
 === Table of contents ===
 => Features
@@ -55,6 +55,7 @@ i=in,o=out
 
 === Example setup ===
 -- GetInput --
+
 set /a mousexpos=mouseypos=keyspressed=click=wheeldelta=0 & :: Reset the variables
 set /a rasterx=8,rastery=8 & :: Optional: set 8x8 raster font
 inject getinput.dll
@@ -63,6 +64,7 @@ inject getinput.dll
 echo !mousexpos! !mouseypos! !wheeldelta!...
 
 -- Discord RPC --
+
 set /a discordappid=0000000000000000000 &:: fill in your own obviously
 set discordstate=Hello world
 set discorddetails=Test
@@ -71,6 +73,15 @@ set discordlargeimgtxt=Large image text
 set discordsmallimg=small-img
 set discordsmallimgtxt=Small image Test
 inject discordrpc.dll
+
+-- Map renderer --
+
+set /a levelWidth=113
+set /a levelHeight=78
+set /a viewYoff=0
+set /a viewXoff=0
+set mapFile=map.txt
+inject maprndr.dll
 
 === Notes ===
 The ".dll" files distributed to you aren't actual .dll's.

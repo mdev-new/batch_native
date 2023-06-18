@@ -8,13 +8,15 @@ setlocal enabledelayedexpansion
 
 mode 40,20
 
+SET BATCHNATIVE_BIN_HOME=..\..
+
 set /a levelWidth=113
 set /a levelHeight=78
 set /a viewYoff=0
 set /a viewXoff=0
-set mapFile=hello2.txt
+set mapFile=map.txt
 
-inject map_rndr.dll
+%BATCHNATIVE_BIN_HOME%\inject %BATCHNATIVE_BIN_HOME%\map_rndr.dll
 
 set /a timeout=1000
 
