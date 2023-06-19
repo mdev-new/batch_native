@@ -14,7 +14,11 @@
 //#include <shellscalingapi.h>
 #include <math.h>
 
+#include <xinput.h>
+
 #include <stdbool.h>
+
+#include "extern/printf.h"
 
 // compiler, i know what im doing, now shut up
 #pragma GCC diagnostic ignored "-Wimplicit-int"
@@ -32,9 +36,11 @@
 
 signed wheelDelta = 0;
 
-BYTE b[21] = {0}, *c;
-PCHAR GETINPUT_SUB itoa_(i,x) {
-	c = b+20, x = abs(i);
+PCHAR GETINPUT_SUB itoa_(int i) {
+	static char buffer[21] = {0};
+
+	char *c = buffer+20;
+	int x = abs(i);
 
 	do {
 		*--c = 48 + x % 10;
@@ -44,7 +50,7 @@ PCHAR GETINPUT_SUB itoa_(i,x) {
 	return c;
 }
 
-int GETINPUT_SUB ma_ceil(float num) {
+int GETINPUT_SUB my_ceil(float num) {
 	int a = num;
 	if ((float)a != num) {
 		return a+1;
@@ -81,24 +87,42 @@ long GETINPUT_SUB getenvnum(char *name) {
 // so i just made this
 // this technically disallows key code 0xFF but once that becomes a problem
 // i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
-BYTE conversion_table[] = {
-//       0     1     2     3     4     5     6     7     8     9     A     B     C     D     E     F
-/* 0 */  -1  , -1  , 0x02, 0x03, -1  , -1  , -1  , 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, // exclude mouse buttons
-/* 1 */  0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
-/* 2 */  0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
-/* 3 */  0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
-/* 4 */  0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F,
-/* 5 */  0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x5F,
-/* 6 */  0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F,
-/* 7 */  0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
-/* 8 */  0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
-/* 9 */  0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F,
-/* A */  -1  , -1  , -1  , -1  , -1  , -1  , 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, // exclude right/left ctrl,shift,etc.
-/* B */  0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF,
-/* C */  0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
-/* D */  0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,
-/* E */  0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF,
-/* F */  0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF,
+// zeroes compress better
+BYTE conversion_table[256] = {
+//        0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+/* 0 */  -1, -1,  0,  0, -1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0, // exclude mouse buttons
+/* 1 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 2 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 3 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 4 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 5 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 6 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 7 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 8 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* 9 */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* A */  -1, -1, -1, -1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // exclude right/left ctrl,shift,etc.
+/* B */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* C */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* D */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* E */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+/* F */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+};
+
+char *controller[] = {
+	"DPAD_UP",
+	"DPAD_DOWN",
+	"DPAD_LEFT",
+	"DPAD_RIGHT",
+	"START",
+	"BACK",
+	"LTHUMB",
+	"RTHUMB",
+	"LSHOULDER",
+	"RSHOULDER",
+	"BTN_A",
+	"BTN_B",
+	"BTN_X",
+	"BTN_Y"
 };
 
 BYTE m[0x100] = {0};
@@ -127,7 +151,7 @@ VOID GETINPUT_SUB process_keys() {
 
 	for(int i = 0; i < 0x100; ++i) {
 		if(m[i]) {
-			int num = conversion_table[i];
+			int num = (conversion_table[i] == 0) ? i : conversion_table[i];
 			if(num != (BYTE)(-1)) {
 				if(buffer[0] == 0) {
 					buffer[0] = '-';
@@ -157,9 +181,8 @@ LRESULT GETINPUT_SUB CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lPa
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void *data) {
-	HANDLE 
-	hOut = GetStdHandle(STD_OUTPUT_HANDLE),
-	hIn = GetStdHandle(STD_INPUT_HANDLE);
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HWND hCon = GetConsoleWindow();
 
 	BYTE mouseclick;
@@ -173,7 +196,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 
 	// ntdll.dll
 	RtlGetVersion(&osVersionInfo);
-	bool bWin10 = osVersionInfo.dwMajorVersion >= 10;
+	const bool bWin10 = osVersionInfo.dwMajorVersion >= 10;
 
 	HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int *) = NULL;
 	HRESULT(*SetProcessDpiAwarenessProc)(int) = NULL;
@@ -185,8 +208,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 		CloseHandle(shcore);
 	}
 
-	int rasterx = getenvnum("rasterx"),
-		rastery = getenvnum("rastery");
+	int rasterx = getenvnum("rasterx");
+	int rastery = getenvnum("rastery");
 
 	const bool isRaster = rasterx && rastery;
 
@@ -203,8 +226,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 		SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 	}
 
-	int lmx = getenvnum("limitMouseX"),
-		lmy = getenvnum("limitMouseY");
+	int lmx = getenvnum("limitMouseX");
+	int lmy = getenvnum("limitMouseY");
 
 	const bool bLimit = lmx && lmy;
 
@@ -221,7 +244,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 
 	MSG mouseMsg;
 	int scale = 100, prevScale = scale, roundedScale;
-	register float fscalex = 1.0, fscaley = fscalex;
+	float fscalex = 1.0, fscaley = fscalex;
 	register int mousx, mousy;
 
 	char counter = 0;
@@ -230,6 +253,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 	GetConsoleMode(hIn, &mode);
 	mode &= ~ENABLE_PROCESSED_INPUT;
 	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
+
+	char buffer[1024]; // a preallocated temp buffer ain't killing noone :)
+	char buffer1[128]; // and another one :)
 
 	while(TRUE) {
 		Sleep(1000 / 125);
@@ -250,11 +276,11 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 			(GetKeyState(VK_MBUTTON) & 0x80) >> 5;
 
 		if(mouseclick && GetSystemMetrics(SM_SWAPBUTTON)) {
-			mouseclick |= mouseclick & 3;
+			mouseclick ^= mouseclick & 3; // todo
 		}
 
 		if(bWin10 && prevScale != scale) {
-			// this somehow works, !!DO NOT TOUCH!!
+			// this somehow (mostly) works, !!DO NOT TOUCH!!
 			if(!isRaster) fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
 			else {
 				roundedScale = (scale - 100 * (scale / 100));
@@ -269,9 +295,43 @@ DWORD GETINPUT_SUB CALLBACK Process(void *data) {
 			prevScale = scale;
 		}
 
+		for (DWORD i = 0; i < 4; i++) {
+			XINPUT_STATE state;
+			ZeroMemory(&state, sizeof(XINPUT_STATE));
+
+			DWORD dwResult = XInputGetState(i, &state);
+
+			ZeroMemory(buffer1, 128);
+			sprintf(buffer1, "controller%d", i+1);
+
+			if(dwResult == ERROR_SUCCESS) { /* controller is connected */
+				ZeroMemory(buffer, 1024);
+				buffer[0] = '-';
+
+				WORD size = 0;
+
+				for(int j = 1; j <= 0x8000; j <<= 1) {
+					if(state.Gamepad.wButtons & j) {
+						size += sprintf(buffer+size, "%s-", controller[j]);
+					}
+				}
+
+				size += sprintf(buffer+size, "ltrig=%d-", state.Gamepad.bLeftTrigger);
+				size += sprintf(buffer+size, "rtrig=%d-", state.Gamepad.bRightTrigger);
+				size += sprintf(buffer+size, "lthumbx=%d-", state.Gamepad.sThumbLX);
+				size += sprintf(buffer+size, "lthumby=%d-", state.Gamepad.sThumbLY);
+				size += sprintf(buffer+size, "rthumbx=%d-", state.Gamepad.sThumbRX);
+				size += sprintf(buffer+size, "rthumby=%d", state.Gamepad.sThumbRY);
+
+				SetEnvironmentVariable(buffer1, buffer);
+			} else {
+				SetEnvironmentVariable(buffer1, NULL);
+			}
+		}
+
 		// this would get messy
-		mousx = ma_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f);
-		mousy = ma_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
+		mousx = my_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f);
+		mousy = my_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
 
 		ENV("mousexpos", (!bLimit || (bLimit && mousx <= lmx)) ? itoa_(mousx) : NULL);
 		ENV("mouseypos", (!bLimit || (bLimit && mousy <= lmy)) ? itoa_(mousy) : NULL);

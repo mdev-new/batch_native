@@ -5,13 +5,13 @@ setlocal enableextensions enabledelayedexpansion
 
 if not exist bin mkdir bin
 
-if not exist bin\comptool.exe call :recompileTool
+if not exist dist\devel\comptool.exe call :recompileTool
 if "%1"=="fullbuild" call :recompileTool
 
 set optargs=-pipe -static -Isrc -std=gnu99 -m64 -Os -flto -fPIC -fPIE -msse -mavx -mmmx -funsafe-math-optimizations -ftree-vectorize -ffast-math -ftree-slp-vectorize -fassociative-math -fvisibility=hidden -fcompare-debug-second -fno-exceptions -fno-stack-protector -fno-math-errno -fno-ident -fno-asynchronous-unwind-tables -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-s,--gc-sections,--reduce-memory-overheads,--no-seh,--disable-reloc-section,--build-id=none -DNDEBUG
 
 %= GetInput =%
-call :compile_C_Dll "src\getinput.c" "bin\getinput.dll" "-lshcore -lgdi32 -lntdll"
+call :compile_C_Dll "src\getinput.c" "bin\getinput.dll" "-lshcore -lgdi32 -lntdll -lxinput src\extern\printf.c"
 
 %= Map Renderer =%
 call :compile_Cpp_Dll "src\map_renderer.cpp" "bin\map_rndr.dll" ""
@@ -31,7 +31,7 @@ for %%a in (getinput discordrpc map_rndr) do (
 %= This also doesn't have to build every time =%
 
 if "%1"=="fullbuild" (
-	gcc -o dist\inject.exe src\hook.c src\extern\chkstk.S -Isrc -Ibin -std=gnu99 -m64 -Os -s -flto -mconsole -Wl,-e,WinMain -lkernel32 -luser32 -lpsapi -lshlwapi -lshell32
+	gcc -o dist\inject.exe src\hook.c src\extern\chkstk.S -Isrc -Ibin -std=gnu99 -m64 -Os -s -mwindows -nostartfiles -nodefaultlibs -nostdlib -nolibc -Wl,-e,WinMain -lkernel32 -luser32 -lpsapi -lshlwapi -lshell32 -DNDEBUG
 	strip --strip-unneeded -s -R .comment -R .gnu.version dist\inject.exe
 )
 

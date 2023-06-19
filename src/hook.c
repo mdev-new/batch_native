@@ -17,7 +17,7 @@
 #include "extern/sinfl.h"
 #include "shared.h"
 
-// stolen from some random ass tutorial or yt video
+// shamelessly stolen from some random ass yt vid
 // and ported to x64
 // and modified
 
@@ -56,9 +56,26 @@ typedef DWORD(__stdcall* DllEntry)(HMODULE, DWORD, LPVOID);
 
 #define dbg(message) MessageBoxA(NULL, message, "dbg", 0);
 
+PCHAR itoa_(int i) {
+	static char buffer[21] = {0};
+
+	char *c = buffer+20;
+	int x = abs(i);
+
+	do {
+		*--c = 48 + x % 10;
+	} while(x && (x/=10));
+
+	if(i < 0) *--c = 45;
+	return c;
+}
+
 // not even gonna attempt to error check that
 // also this runs inside cmd.exe
 DWORD WINAPI loadLibrary(LoaderData* loaderData) {
+//	DWORD(WINAPI * msgbox)(HWND, LPCSTR, LPCSTR, UINT) = loaderData->getProcAddress(loaderData->loadLibraryA("user32.dll"), "MessageBoxA");
+//	msgbox(NULL, "1", "here", 0);
+
 	IMAGE_NT_HEADERS * ntHeaders = (IMAGE_NT_HEADERS *)(loaderData->imageBase + ((IMAGE_DOS_HEADER *)loaderData->imageBase)->e_lfanew);
 	IMAGE_BASE_RELOCATION * relocation = (IMAGE_BASE_RELOCATION *)(loaderData->imageBase + ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
 	QWORD delta = (QWORD)(loaderData->imageBase - ntHeaders->OptionalHeader.ImageBase);
@@ -67,7 +84,7 @@ DWORD WINAPI loadLibrary(LoaderData* loaderData) {
 		PWORD relocationInfo = (PWORD)(relocation + 1);
 		for (int i = 0, count = (relocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD); i < count; i++) {
 			if (relocationInfo[i] >> 12 == IMAGE_REL_BASED_HIGHLOW) {
-				*(QWORD *)(loaderData->imageBase + (relocation->VirtualAddress + (relocationInfo[i] & 0xFFF))) += delta;
+				*(DWORD *)(loaderData->imageBase + (relocation->VirtualAddress + (relocationInfo[i] & 0xFFF))) += delta;
 			}
 		}
 
@@ -108,8 +125,7 @@ DWORD WINAPI loadLibrary(LoaderData* loaderData) {
 
 	if (ntHeaders->OptionalHeader.AddressOfEntryPoint) {
 		DllEntry entry = (loaderData->imageBase + ntHeaders->OptionalHeader.AddressOfEntryPoint);
-		DWORD result = entry((HMODULE)loaderData->imageBase, DLL_PROCESS_ATTACH, NULL);
-		return result;
+		return entry((HMODULE)loaderData->imageBase, DLL_PROCESS_ATTACH, NULL);
 	}
 
 	return TRUE;
@@ -119,29 +135,26 @@ DWORD WINAPI loadLibrary(LoaderData* loaderData) {
 void stub(void) {}
 
 INT HookDll(HANDLE hProcess, LPVOID dllcode) {
-	dbg("0");
+	dbg("dbg: 0");
 	IMAGE_NT_HEADERS * ntHeaders = (IMAGE_NT_HEADERS *)(dllcode + ((IMAGE_DOS_HEADER *)dllcode)->e_lfanew);
 	BYTE * executableImage = VirtualAllocEx(hProcess, NULL, ntHeaders->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if(executableImage == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
 	if(WriteProcessMemory(hProcess, executableImage, dllcode, ntHeaders->OptionalHeader.SizeOfHeaders, NULL) == 0) return ERROR_CANNOT_WRITE_PROCESS_MEM;
 
-	dbg("1");
+	dbg("dbg: 1");
 
-	PIMAGE_SECTION_HEADER sectionHeaders = (PIMAGE_SECTION_HEADER)(ntHeaders + 1);
+	IMAGE_SECTION_HEADER * sectionHeaders = (IMAGE_SECTION_HEADER *)(ntHeaders + 1);
 	for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
-		// maybe err chk
-		WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL);
+		DWORD result = WriteProcessMemory(hProcess, executableImage + sectionHeaders[i].VirtualAddress, dllcode + sectionHeaders[i].PointerToRawData, sectionHeaders[i].SizeOfRawData, NULL);
+		dbg(itoa_(result));
 	}
 
-	dbg("2");
+	dbg("dbg: 2");
 
-	LoaderData* loaderMemory = VirtualAllocEx(hProcess, NULL, sizeof(LoaderData), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	LoaderData* loaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if(loaderMemory == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
 
-	void* loadLibInCmd = VirtualAllocEx(hProcess, NULL, (QWORD)stub - (QWORD)loadLibrary, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	if(loadLibInCmd == NULL) return ERROR_CANNOT_VIRTUAL_ALLOC;
-
-	dbg("3");
+	dbg("dbg: 3");
 
 	LoaderData loaderParams = {
 		.imageBase = executableImage,
@@ -151,16 +164,16 @@ INT HookDll(HANDLE hProcess, LPVOID dllcode) {
 	};
 
 	if(!WriteProcessMemory(hProcess, loaderMemory, &loaderParams, sizeof(LoaderData), NULL)) return ERROR_CANNOT_WRITE_PROCESS_MEM;
-	dbg("4");
-	if(!WriteProcessMemory(hProcess, loadLibInCmd, loadLibrary, (QWORD)stub - (QWORD)loadLibrary, NULL)) return ERROR_CANNOT_WRITE_PROCESS_MEM;
-	dbg("5");
+	dbg("dbg: 4");
+	if(!WriteProcessMemory(hProcess, loaderMemory + 1, loadLibrary, (QWORD)(stub) - (QWORD)(loadLibrary), NULL)) return ERROR_CANNOT_WRITE_PROCESS_MEM;
+	dbg("dbg: 5");
 
-	WaitForSingleObject(CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)(loadLibInCmd), loaderMemory, 0, NULL), INFINITE);
-	dbg("6");
+	WaitForSingleObject(CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)(loaderMemory + 1), loaderMemory, 0, NULL), INFINITE);
+	dbg("dbg: 6");
 
 	if(!VirtualFreeEx(hProcess, loaderMemory, 0, MEM_RELEASE)) return ERROR_CANNOT_VIRTUAL_FREE;
 
-	dbg("we survived");
+	dbg("dbg: we survived");
 	return 0;
 }
 
@@ -249,7 +262,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 	if(!bForce) {
 		if(GetModuleFileNameEx(hProcess, NULL, parentPath, MAX_PATH) == 0) return ERROR_CANNOT_GET_PARENT_PROC_PATH;
 		if(lstrcmp("cmd.exe", parentPath + lstrlen(parentPath) - 7) != 0) {
-			MessageBox(0, "Parrent process must be cmd.exe!", "Error", MB_OK | MB_ICONINFORMATION);
+			MessageBox(0, "Parent process must be cmd.exe!\nAdd -force switch to override.", "Error", MB_OK | MB_ICONINFORMATION);
 			return ERROR_NOT_CMDEXE;
 		}
 	}
