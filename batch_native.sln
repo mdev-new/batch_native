@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.33529.622
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getinput", "getinput\getinput.vcxproj", "{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "discord_rpc", "discord_rpc\discord_rpc.vcxproj", "{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "map_rndr", "map_rndr\map_rndr.vcxproj", "{F96078A9-022F-48D0-AC45-955814EF5B45}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}.Debug|x64.ActiveCfg = Debug|x64
+		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}.Debug|x64.Build.0 = Debug|x64
+		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}.Debug|x86.ActiveCfg = Debug|x64
+		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}.Release|x64.ActiveCfg = Release|x64
+		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}.Release|x64.Build.0 = Release|x64
+		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}.Release|x86.ActiveCfg = Release|x64
+		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}.Debug|x64.ActiveCfg = Debug|x64
+		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}.Debug|x64.Build.0 = Debug|x64
+		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}.Debug|x86.ActiveCfg = Debug|x64
+		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}.Release|x64.ActiveCfg = Release|x64
+		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}.Release|x64.Build.0 = Release|x64
+		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001}.Release|x86.ActiveCfg = Release|x64
+		{F96078A9-022F-48D0-AC45-955814EF5B45}.Debug|x64.ActiveCfg = Debug|x64
+		{F96078A9-022F-48D0-AC45-955814EF5B45}.Debug|x64.Build.0 = Debug|x64
+		{F96078A9-022F-48D0-AC45-955814EF5B45}.Debug|x86.ActiveCfg = Debug|x64
+		{F96078A9-022F-48D0-AC45-955814EF5B45}.Release|x64.ActiveCfg = Release|x64
+		{F96078A9-022F-48D0-AC45-955814EF5B45}.Release|x64.Build.0 = Release|x64
+		{F96078A9-022F-48D0-AC45-955814EF5B45}.Release|x86.ActiveCfg = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {98ADFCE5-1F69-429D-8A7A-95E410245EEE}
+	EndGlobalSection
+EndGlobal
