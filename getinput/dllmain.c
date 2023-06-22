@@ -347,7 +347,7 @@ BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpRes
 		//	return TRUE;
 		//}
 
-		MessageBox(NULL, "Running", "a", 0);
+		//MessageBox(NULL, "Running", "a", 0);
 		DisableThreadLibraryCalls(hInst);
 		CreateThreadS(Process);
 	}
