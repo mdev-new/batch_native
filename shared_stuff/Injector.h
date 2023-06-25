@@ -1,7 +1,11 @@
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <winternl.h>
 #include <psapi.h>
 #include <shlwapi.h>
@@ -45,7 +49,9 @@ __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, LPSTR lps
 	LPVOID lpBaseAddress = VirtualAllocEx(hProcess, NULL, lstrlen(filename), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	WriteProcessMemory(hProcess, lpBaseAddress, filename, lstrlen(filename), NULL);
 
-	HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA"), lpBaseAddress, 0, NULL);
+	LPTHREAD_START_ROUTINE startAddr = (LPTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+	HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, startAddr, lpBaseAddress, 0, NULL);
+	WaitForSingleObject(hThread, INFINITE);
 	CloseHandle(hThread);
 	CloseHandle(hProcess);
 	return;

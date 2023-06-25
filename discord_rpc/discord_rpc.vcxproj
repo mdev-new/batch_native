@@ -60,7 +60,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
-      <AdditionalIncludeDirectories>C:\Users\Zdenda\source\repos\batch_native\discord_rpc\extern\rapidjson\include;C:\Users\Zdenda\source\repos\batch_native\discord_rpc\extern\discord-rpc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)shared_stuff;$(ProjectDir)extern\rapidjson\include;$(ProjectDir)extern\discord-rpc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -84,7 +84,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <AdditionalIncludeDirectories>C:\Users\Zdenda\source\repos\batch_native\shared_stuff;C:\Users\Zdenda\source\repos\batch_native\discord_rpc\extern\discord-rpc\include;C:\Users\Zdenda\source\repos\batch_native\discord_rpc\extern\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)shared_stuff;$(ProjectDir)extern\rapidjson\include;$(ProjectDir)extern\discord-rpc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -101,6 +101,12 @@
     <ClCompile Include="extern\discord-rpc\src\discord_rpc.cpp" />
     <ClCompile Include="extern\discord-rpc\src\rpc_connection.cpp" />
     <ClCompile Include="extern\discord-rpc\src\serialization.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="discord_rpc.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

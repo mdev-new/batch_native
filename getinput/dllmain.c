@@ -1,15 +1,10 @@
-//#define _WIN32_WINNT _WIN32_WINNT_WIN7
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include <shlwapi.h>
 #include <shellapi.h>
 
-//#define DISABLE_CONTROLLER
-#ifndef DISABLE_CONTROLLER
-	#include <xinput.h>
-	#pragma comment(lib, "Xinput9_1_0") // xinput 1.3
-#endif
+#include <xinput.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -18,14 +13,9 @@
 
 #define GETINPUT_SUB
 
-#define str(x) #x
-#define DbgMsgBox(msg) MessageBoxA(NULL, msg, "DbgMsgBox" str(__COUNTER__), MB_ICONWARNING | MB_OK)
-
 // i am too lazy lmfao
 #define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
 #define ENV SetEnvironmentVariable
-
-signed wheelDelta = 0;
 
 long RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation);
 
@@ -60,11 +50,9 @@ long GETINPUT_SUB getenvnum(const char* name) {
 		: 0;
 }
 
-// i was way too lazy to check for values individually
-// so i just made this
+// i was way too lazy to check for values individually, so this was created
 // this technically disallows key code 0xFF but once that becomes a problem
 // i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
-// zeroes compress better
 BYTE conversion_table[256] = {
 	//        0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
 	/* 0 */  -1, -1,  0,  0, -1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0, // exclude mouse buttons
@@ -85,20 +73,31 @@ BYTE conversion_table[256] = {
 	/* F */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
 
-BYTE m[0x100] = { 0 };
-char buffer[0x300] = { 0 };
 /* TODO optimize */
 VOID GETINPUT_SUB process_keys() {
+	static BYTE pressed[0x100] = { 0 };
+
+	// 104 (# of keys on a standard keyboard) * 4 (max amount of chars emmited per key (-123)) + 1 (ending dash)
+	static char buffer[104 * 4 + 1];
+
 	int isAnyKeyDown = 0, actionHappened = 0;
 	BOOL state = 0;
+	WORD idx = 1;
 
 	for (int i = 3; i < 0x100; ++i) {
 		state = GetAsyncKeyState(i);
-		// todo optimize
-		if (!m[i] && state & 0x8000) { m[i] = TRUE; actionHappened = TRUE; }
-		if (m[i] && !state) { m[i] = FALSE; actionHappened = TRUE; }
 
-		isAnyKeyDown |= m[i];
+		if (!pressed[i] && state & 0x8000) {
+			pressed[i] = TRUE;
+			actionHappened = TRUE;
+		}
+
+		if (pressed[i] && !state) {
+			pressed[i] = FALSE;
+			actionHappened = TRUE;
+		}
+
+		isAnyKeyDown |= pressed[i];
 	}
 
 	if (!actionHappened) return;
@@ -107,56 +106,43 @@ VOID GETINPUT_SUB process_keys() {
 		return;
 	}
 
-	ZeroMemory(buffer, 0x300);
+	ZeroMemory(buffer, sizeof(buffer));
+	buffer[0] = '-';
 
 	for (int i = 0; i < 0x100; ++i) {
-		if (m[i]) {
-			int num = (conversion_table[i] == 0) ? i : conversion_table[i];
-			if (num != (BYTE)(-1)) {
-				if (buffer[0] == 0) {
-					buffer[0] = '-';
-#ifdef IS_YESHI_ANNOYING_AGAIN
-					ENV("keypressed", itoa_(num));
-#endif
-				}
+		if (!pressed[i]) continue;
 
-				lstrcat(buffer, itoa_(num));
-				lstrcat(buffer, "-");
-			}
-		}
+		int num = (conversion_table[i] == 0) ? i : conversion_table[i];
+		if (num == (BYTE)(-1)) continue;
+
+		idx += sprintf(buffer + idx, "%d-", num);
 	}
 
 	SetEnvironmentVariable("keyspressed", buffer);
 }
 
-#ifndef DISABLE_CONTROLLER
-char* number_to_controller(WORD num) {
-	switch (num) {
-	case 0x0001: return "DPAD_UP";
-	case 0x0002: return "DPAD_DOWN";
-	case 0x0004: return "DPAD_LEFT";
-	case 0x0008: return "DPAD_RIGHT";
-	case 0x0010: return "START";
-	case 0x0020: return "BACK";
-	case 0x0040: return "LTHUMB";
-	case 0x0080: return "RTHUMB";
-	case 0x0100: return "LSHOULDR";
-	case 0x0200: return "RSHOULDR";
-	case 0x1000: return "BTN_A";
-	case 0x2000: return "BTN_B";
-	case 0x4000: return "BTN_X";
-	case 0x8000: return "BTN_Y";
-	default:     return NULL;
-	}
-	return NULL;
-}
+char* number_to_controller[] = {
+	"dpad_up",
+	"dpad_down",
+	"dpad_left",
+	"dpad_right",
+	"start",
+	"back",
+	"lthumb",
+	"rthumb",
+	"lshouldr",
+	"rshouldr",
+	"btn_a",
+	"btn_b",
+	"btn_x",
+	"btn_y"
+};
 
 VOID GETINPUT_SUB PROCESS_CONTROLLER() {
-	char buffer[256] = { 0 };
-	char buffer1[16] = { 'c', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r', 0, 0, 0, 0, 0, 0 };
-	XINPUT_STATE state = { 0 };
-	DWORD dwResult = 0;
-	int size = 0;
+	static char buffer[256] = { 0 };
+	static char varName[16] = { 'c', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r', 0, 0, 0, 0, 0, 0 };
+	XINPUT_STATE state;
+	DWORD dwResult, size;
 
 	// pretend like this doesn't exist
 	const static int list[] = {
@@ -168,38 +154,32 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER() {
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
 		dwResult = XInputGetState(i, &state);
 
-		buffer1[10] = '0' + (i + 1);
+		varName[10] = '0' + (i + 1);
 
 		if (dwResult == ERROR_SUCCESS) { /* controller is connected */
-			ZeroMemory(buffer, 256);
+			ZeroMemory(buffer, sizeof buffer);
 			size = 0;
 
 			for (WORD var = 0; var < 14; var++) {
 				if (state.Gamepad.wButtons & list[var]) {
-					char* ptr = number_to_controller(list[var]);
+					char* ptr = number_to_controller[var];
 					size += sprintf(buffer + size, "-%s", ptr);
 				}
 			}
 
-			size += sprintf(buffer + size, "-ltrig=%d-", state.Gamepad.bLeftTrigger);
-			size += sprintf(buffer + size, "rtrig=%d-", state.Gamepad.bRightTrigger);
-			size += sprintf(buffer + size, "lthumbx=%d-", state.Gamepad.sThumbLX);
-			size += sprintf(buffer + size, "lthumby=%d-", state.Gamepad.sThumbLY);
-			size += sprintf(buffer + size, "rthumbx=%d-", state.Gamepad.sThumbRX);
-			size += sprintf(buffer + size, "rthumby=%d-", state.Gamepad.sThumbRY);
+			size += sprintf(buffer + size, "-ltrig=%d-rtrig=%d-lthumbx=%d-lthumby=%d-rthumbx=%d-rthumby=%d-", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, state.Gamepad.sThumbLX, state.Gamepad.sThumbLY, state.Gamepad.sThumbRX, state.Gamepad.sThumbRY);
 
-			SetEnvironmentVariable(buffer1, buffer);
+			SetEnvironmentVariable(varName, buffer);
 		}
 		else {
-			SetEnvironmentVariable(buffer1, NULL);
+			SetEnvironmentVariable(varName, NULL);
 		}
 	}
 }
-#endif
 
 LRESULT GETINPUT_SUB CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	MSLLHOOKSTRUCT* info = (MSLLHOOKSTRUCT*)lParam;
-	wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
+	short wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
 
 	if (wheelDelta != 0) {
 		wheelDelta /= WHEEL_DELTA;
@@ -207,6 +187,16 @@ LRESULT GETINPUT_SUB CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lPa
 	}
 
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+DWORD GETINPUT_SUB CALLBACK MouseMessageThread(void* data) {
+	HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
+
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void* data) {
@@ -237,16 +227,19 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		CloseHandle(shcore);
 	}
 
+	int lmx = getenvnum("limitMouseX");
+	int lmy = getenvnum("limitMouseY");
+	const bool bLimitMouse = lmx && lmy;
+
 	int rasterx = getenvnum("rasterx");
 	int rastery = getenvnum("rastery");
-
 	const bool isRaster = rasterx && rastery;
 
 	if (isRaster) {
 		CONSOLE_FONT_INFOEX cfi = {
 			.cbSize = sizeof(CONSOLE_FONT_INFOEX),
 			.nFont = 0,
-			.dwFontSize = {rasterx, rastery},
+			.dwFontSize = { rasterx, rastery },
 			.FontFamily = FF_DONTCARE,
 			.FontWeight = FW_NORMAL,
 			.FaceName = L"Terminal"
@@ -255,28 +248,19 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 	}
 
-	int lmx = getenvnum("limitMouseX");
-	int lmy = getenvnum("limitMouseY");
-
-	const bool bLimit = lmx && lmy;
-
 	if (getenvnum("noresize") == 1) {
 		DWORD style = GetWindowLong(hCon, GWL_STYLE);
-		SetWindowLong(hCon, GWL_STYLE, style & ~(WS_SIZEBOX | WS_MAXIMIZEBOX));
+		style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
+		SetWindowLong(hCon, GWL_STYLE, style);
 	}
-
-	HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
 	if (bWin10) {
 		SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
 	}
 
-	MSG mouseMsg;
 	int scale = 100, prevScale = scale, roundedScale;
 	float fscalex = 1.0, fscaley = fscalex;
-	register int mousx, mousy;
-
-	char counter = 0;
+	int mousx, mousy;
 
 	DWORD mode = 0;
 	GetConsoleMode(hIn, &mode);
@@ -284,14 +268,13 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
 
 	while (TRUE) {
-		Sleep(1000 / 125);
-		PeekMessage(&mouseMsg, hCon, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
-		if (((++counter) % 5) != 0) continue;
-
 		SetConsoleMode(hIn, mode);
 		GetCurrentConsoleFont(hOut, FALSE, &info);
 
-		if (bWin10) GetScaleFactorForMonitorProc(MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST), &scale);
+		if (bWin10) {
+			HMONITOR monitor = MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST);
+			GetScaleFactorForMonitorProc(monitor, &scale);
+		}
 
 		GetPhysicalCursorPos(&pt);
 		ScreenToClient(hCon, &pt);
@@ -302,7 +285,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 			(GetKeyState(VK_MBUTTON) & 0x80) >> 5;
 
 		if (mouseclick && GetSystemMetrics(SM_SWAPBUTTON)) {
-			mouseclick ^= mouseclick & 3; // todo
+			mouseclick |= mouseclick & 0b11;
 		}
 
 		if (bWin10 && prevScale != scale) {
@@ -325,29 +308,21 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		mousx = my_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f);
 		mousy = my_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
 
-		ENV("mousexpos", (!bLimit || (bLimit && mousx <= lmx)) ? itoa_(mousx) : NULL);
-		ENV("mouseypos", (!bLimit || (bLimit && mousy <= lmy)) ? itoa_(mousy) : NULL);
+		ENV("mousexpos", (!bLimitMouse || (bLimitMouse && mousx <= lmx)) ? itoa_(mousx) : NULL);
+		ENV("mouseypos", (!bLimitMouse || (bLimitMouse && mousy <= lmy)) ? itoa_(mousy) : NULL);
 
 		if (hCon == GetForegroundWindow()) {
 			ENV("click", itoa_(mouseclick));
 			process_keys();
-#ifndef DISABLE_CONTROLLER
 			PROCESS_CONTROLLER();
-#endif
 		}
+
+		Sleep(1000 / 40);
 	}
 }
 
 BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
 	if (dwReason == DLL_PROCESS_ATTACH) {
-
-		//char runningProcessName[MAX_PATH] = { 0 };
-		//GetModuleFileName(NULL, runningProcessName, MAX_PATH);
-		//if (lstrcmp("rundll32.exe", runningProcessName + lstrlen(runningProcessName) - 12) != 0) {
-		//	return TRUE;
-		//}
-
-		//MessageBox(NULL, "Running", "a", 0);
 		DisableThreadLibraryCalls(hInst);
 		CreateThreadS(Process);
 	}

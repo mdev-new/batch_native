@@ -111,7 +111,7 @@ DWORD CALLBACK Process(LPVOID data) {
 
 INT WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, LPVOID lpReserved) {
 
-	if (fdwReason == 5) {
+	if (fdwReason == DLL_PROCESS_ATTACH) {
 		DisableThreadLibraryCalls(hInst);
 		CreateThreadS(Process);
 	}

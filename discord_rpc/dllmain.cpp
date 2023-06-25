@@ -75,7 +75,7 @@ DWORD Process() {
 }
 
 int APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-	if (dwReason == 5) {
+	if (dwReason == DLL_PROCESS_ATTACH) {
 		DisableThreadLibraryCalls(hInst);
 		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Process, NULL, 0, NULL);
 	}

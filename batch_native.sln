@@ -9,6 +9,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "discord_rpc", "discord_rpc\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "map_rndr", "map_rndr\map_rndr.vcxproj", "{F96078A9-022F-48D0-AC45-955814EF5B45}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7BD5A477-048C-45DC-B79A-E87F22A233F3}"
+	ProjectSection(SolutionItems) = preProject
+		shared_stuff\Injector.h = shared_stuff\Injector.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
