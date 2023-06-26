@@ -1,0 +1,22 @@
+==============================================================================
+                     Batch native developer documentation                     
+==============================================================================
+
+Written by Mdev on 26th of June, 2023
+
+=== Internals of Batch Native ===
+--- Injector ---
+The injector is a small but important piece of code inside every new DLL. It handles hooking the dll into it's parent process, cmd.exe.
+Using it is very simple. You just pop an `#include "Injector.h"` somewhere near the top of your source file and you're done. Then you can inject the dll from the command line like `rundll32 example.dll,inject`.
+Before this new injection system, I had an external exe that would read from disk and inject the dll's into cmd.exe. This method allowed having compressed dlls, but was kinda broken.
+
+--- GetInput ---
+To grab the wheel delta, GetInput uses a global low-level mouse hook.
+
+=== Creating a custom DLL ===
+1. Copy the Example directory to third_party_solutions and give it an appropriate name
+2. In Visual Studio, in Solution Explorer, right click the custom folder and click Add->Existing project
+3. Select the folder you copied and renamed earlier
+4. Rename it inside visual studio too (right click->rename or F2)
+5. Expand the project, expand source files and open dllmain.cpp ; Now you can edit your code
+6. To build, just hit in top bar Build->Build [your_project_name_here] (CTRL-B) or build the entire solution ; Resulting binaries will be in [architecture]\[configuration] (for example x64\Release)

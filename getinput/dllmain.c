@@ -266,7 +266,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
 
 	ENV("wheeldelta", "0");
-	SimpleCreateThread(MouseMessageThread);
+	CreateThread(NULL, 0, MouseMessageThread, NULL, 0, NULL);
 
 	while (TRUE) {
 		SetConsoleMode(hIn, mode);
