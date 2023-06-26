@@ -14,8 +14,8 @@ Before this new injection system, I had an external exe that would read from dis
 To grab the wheel delta, GetInput uses a global low-level mouse hook.
 
 === Creating a custom DLL ===
-1. Copy the Example directory to third_party_solutions and give it an appropriate name
-2. In Visual Studio, in Solution Explorer, right click the custom folder and click Add->Existing project
+1. Create a copy of the Template directory in third_party_extensions and give it an appropriate name
+2. In Visual Studio, in Solution Explorer, right click the "custom" folder and click Add->Existing project
 3. Select the folder you copied and renamed earlier
 4. Rename it inside visual studio too (right click->rename or F2)
 5. Expand the project, expand source files and open dllmain.cpp ; Now you can edit your code
