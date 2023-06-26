@@ -1,22 +1,20 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include <shlwapi.h>
-#include <shellapi.h>
-
 #include <xinput.h>
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "Injector.h"
 
 #define GETINPUT_SUB
 
 // i am too lazy lmfao
-#define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
 #define ENV SetEnvironmentVariable
 
+// not downloading DDK for this :)
 long RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation);
 
 PCHAR GETINPUT_SUB itoa_(int i) {
@@ -73,7 +71,6 @@ BYTE conversion_table[256] = {
 	/* F */   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
 
-/* TODO optimize */
 VOID GETINPUT_SUB process_keys() {
 	static BYTE pressed[0x100] = { 0 };
 
@@ -87,7 +84,7 @@ VOID GETINPUT_SUB process_keys() {
 	for (int i = 3; i < 0x100; ++i) {
 		state = GetAsyncKeyState(i);
 
-		if (!pressed[i] && state & 0x8000) {
+		if (!pressed[i] && (state & 0x8000)) {
 			pressed[i] = TRUE;
 			actionHappened = TRUE;
 		}
@@ -112,7 +109,7 @@ VOID GETINPUT_SUB process_keys() {
 	for (int i = 0; i < 0x100; ++i) {
 		if (!pressed[i]) continue;
 
-		int num = (conversion_table[i] == 0) ? i : conversion_table[i];
+		int num = (conversion_table[i] != 0) ? conversion_table[i] : i;
 		if (num == (BYTE)(-1)) continue;
 
 		idx += sprintf(buffer + idx, "%d-", num);
@@ -150,7 +147,7 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER() {
 		0x0080, 0x0100, 0x0200, 0x1000, 0x2000, 0x4000, 0x8000
 	};
 
-	for (DWORD i = 0; i < 4; i++) {
+	for (char i = 0; i < 4; i++) {
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
 		dwResult = XInputGetState(i, &state);
 
@@ -170,8 +167,7 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER() {
 			size += sprintf(buffer + size, "-ltrig=%d-rtrig=%d-lthumbx=%d-lthumby=%d-rthumbx=%d-rthumby=%d-", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, state.Gamepad.sThumbLX, state.Gamepad.sThumbLY, state.Gamepad.sThumbRX, state.Gamepad.sThumbRY);
 
 			SetEnvironmentVariable(varName, buffer);
-		}
-		else {
+		} else {
 			SetEnvironmentVariable(varName, NULL);
 		}
 	}
@@ -200,6 +196,8 @@ DWORD GETINPUT_SUB CALLBACK MouseMessageThread(void* data) {
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void* data) {
+	Sleep(250);
+
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HWND hCon = GetConsoleWindow();
@@ -267,6 +265,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	mode &= ~ENABLE_PROCESSED_INPUT;
 	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
 
+	ENV("wheeldelta", "0");
+	SimpleCreateThread(MouseMessageThread);
+
 	while (TRUE) {
 		SetConsoleMode(hIn, mode);
 		GetCurrentConsoleFont(hOut, FALSE, &info);
@@ -321,11 +322,4 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	}
 }
 
-BOOL GETINPUT_SUB APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-	if (dwReason == DLL_PROCESS_ATTACH) {
-		DisableThreadLibraryCalls(hInst);
-		CreateThreadS(Process);
-	}
-
-	return TRUE;
-}
+BasicDllMainImpl(Process);

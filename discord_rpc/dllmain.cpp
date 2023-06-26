@@ -17,7 +17,7 @@
 
 char* readenv(const char* name) {
 	static TCHAR buffer[127];
-	GetEnvironmentVariable(name, buffer, 127);
+	GetEnvironmentVariable(name, buffer, sizeof buffer);
 	return _strdup(buffer); // memory leaks go brr
 }
 
@@ -31,6 +31,8 @@ BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 }
 
 DWORD Process() {
+	Sleep(250);
+
 	if (GetEnvironmentVariable("discordappid", NULL, 0) == 0) return TRUE;
 	SetConsoleCtrlHandler(ConsoleCloseHandler, TRUE);
 
@@ -39,7 +41,8 @@ DWORD Process() {
 	Discord_Initialize(readenv("discordappid"), &handlers, 1, NULL);
 
 	DiscordRichPresence discordPresence;
-	memset(&discordPresence, 0, sizeof(discordPresence));
+	ZeroMemory(&discordPresence, sizeof(discordPresence));
+
 	discordPresence.state = readenv("discordstate");
 	discordPresence.details = readenv("discorddetails");
 	discordPresence.startTimestamp = time(0);
@@ -74,10 +77,4 @@ DWORD Process() {
 	return 0;
 }
 
-int APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
-	if (dwReason == DLL_PROCESS_ATTACH) {
-		DisableThreadLibraryCalls(hInst);
-		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Process, NULL, 0, NULL);
-	}
-	return TRUE;
-}
+BasicDllMainImpl(Process);

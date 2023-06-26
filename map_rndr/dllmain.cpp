@@ -37,7 +37,7 @@ int load_map(std::vector<char>** vec, char* fname) {
 	char *tempFileBuf = (char *)alloca(size);
 	ReadFile(hFile, tempFileBuf, size, &read, NULL);
 
-	if (*vec != nullptr) delete* vec; // delete the old map
+	if (*vec != nullptr) delete *vec; // delete the old map
 	*vec = new std::vector<char>((char*)tempFileBuf, (char*)(tempFileBuf + size));
 
 	CloseHandle(hFile);
@@ -50,6 +50,8 @@ int load_map(std::vector<char>** vec, char* fname) {
 }
 
 DWORD CALLBACK Process(LPVOID data) {
+	Sleep(250);
+
 	HANDLE hStdOut;
 	DWORD written;
 	DWORD fileSize;
@@ -100,7 +102,7 @@ DWORD CALLBACK Process(LPVOID data) {
 
 		for (y = 0; y < viewportSzY; y++) {
 			for (x = 0; x < viewportSzX; x++) {
-				scrBuf[y * viewportSzX + x] = (x < w&& y < h) ? map_data->data()[(y + viewportY) * w + (x + viewportX)] : ' ';
+				scrBuf[y * viewportSzX + x] = (x < w && y < h) ? map_data->data()[(y + viewportY) * w + (x + viewportX)] : ' ';
 			}
 		}
 
@@ -109,12 +111,4 @@ DWORD CALLBACK Process(LPVOID data) {
 	}
 }
 
-INT WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, LPVOID lpReserved) {
-
-	if (fdwReason == DLL_PROCESS_ATTACH) {
-		DisableThreadLibraryCalls(hInst);
-		CreateThreadS(Process);
-	}
-
-	return TRUE;
-}
+BasicDllMainImpl(Process);

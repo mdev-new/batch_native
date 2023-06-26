@@ -1,16 +1,23 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#include <winternl.h>
-#include <psapi.h>
-#include <shlwapi.h>
-#include <shellapi.h>
 #include <tlhelp32.h>
+
+#ifdef __cplusplus
+#define NOMANGLE extern "C"
+#else
+#define NOMANGLE
+#endif
+
+#define BasicDllMainImpl(ThreadProcName) \
+int APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {\
+	if (dwReason == DLL_PROCESS_ATTACH) {\
+		DisableThreadLibraryCalls(hInst);\
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadProcName, NULL, 0, NULL);\
+	}\
+	return TRUE;\
+}
 
 DWORD getppid() {
 	HANDLE hSnapshot;
@@ -38,7 +45,7 @@ cleanup:
 	return ppid;
 }
 
-__declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow) {
+NOMANGLE __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow) {
 	HMODULE hSelf = NULL;
 	char filename[MAX_PATH];
 	GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&getppid, &hSelf);
@@ -56,7 +63,3 @@ __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, LPSTR lps
 	CloseHandle(hProcess);
 	return;
 }
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
