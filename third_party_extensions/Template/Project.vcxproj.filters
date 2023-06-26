@@ -25,7 +25,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Example.rc">
+    <ResourceCompile Include="Project.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
