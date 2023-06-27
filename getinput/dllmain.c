@@ -84,7 +84,7 @@ VOID GETINPUT_SUB process_keys() {
 	for (int i = 3; i < 0x100; ++i) {
 		state = GetAsyncKeyState(i);
 
-		if (!pressed[i] && (state & 0x8000)) {
+		if (!pressed[i] && (state & 0x8000) && conversion_table[i] != (BYTE)(-1)) {
 			pressed[i] = TRUE;
 			actionHappened = TRUE;
 		}
