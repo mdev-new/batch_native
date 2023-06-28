@@ -19,8 +19,9 @@ long RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation);
 
 PCHAR GETINPUT_SUB itoa_(int i) {
 	static char buffer[21] = { 0 };
+	ZeroMemory(buffer, 21);
 
-	char* c = buffer + 20;
+	char* c = buffer + 19; // buffer[20] must be \0
 	int x = abs(i);
 
 	do {
