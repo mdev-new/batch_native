@@ -1,1 +1,0 @@
-for license terms see _dist\batch_native.txt
