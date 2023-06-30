@@ -114,58 +114,20 @@ char* number_to_controller[] = {
 	"btn_y"
 };
 
-typedef struct _pair {
-	int first, second;
-} pair;
+typedef struct _vec2i {
+	int x, y;
+} vec2i;
 
-pair process_stick(pair axes, int deadzone) {
-	int dx = deadzone * abs(axes.first);
-	int dy = deadzone * abs(axes.second);
+vec2i process_stick(vec2i axes, short deadzone) {
+	const int deadzone_squared = deadzone * deadzone;
 
-	pair result = axes;
-	if (abs(result.first) < dx) result.first = 0;
-	if (abs(result.second) < dy) result.second = 0;
-
-	return result;
-}
-
-pair old_process_stick(pair axes, int deadzone) {
-	int x = 0, y = 0;
-	int abs_inx = abs(axes.first);
-	int abs_iny = abs(axes.second);
-
-	if (abs_inx && abs_inx > deadzone) x = axes.first;
-	if (abs_iny && abs_iny > deadzone) y = axes.second;
-
-#ifdef divide
-	const int divider = 61;
-	x = x / (deadzone / divider);
-	y = y / (deadzone / divider);
-#endif
-
-	return (pair) { x, y };
-}
-
-pair process_stick2(pair axes, short deadzone) {
-	if ((axes.first < deadzone && axes.first > -deadzone) && (axes.second < deadzone && axes.second > -deadzone))
-	{
-		axes.first = 0;
-		axes.second = 0;
+	if (axes.x * axes.x < deadzone_squared) {
+		axes.x = 0;
 	}
 
-	return axes;
-}
-
-pair process_stick3(pair axes, short deadzone) {
-
-	if (axes.first * axes.first < deadzone * deadzone) {
-		axes.first = 0;
+	if (axes.y * axes.y < deadzone_squared) {
+		axes.y = 0;
 	}
-
-	if (axes.second * axes.second < deadzone * deadzone) {
-		axes.second = 0;
-	}
-
 
 	return axes;
 }
@@ -206,9 +168,9 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 				buffer[size++] = '|';
 			}
 
-			pair left_stick = process_stick3((pair){ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
-			pair right_stick = process_stick3((pair) { state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
-			size += sprintf(buffer + size, "ltrig=%d,rtrig=%d,lthumbx=%d,lthumby=%d,rthumbx=%d,rthumby=%d", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, left_stick.first, left_stick.second, right_stick.first, right_stick.second);
+			vec2i left_stick = process_stick((vec2i){ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
+			vec2i right_stick = process_stick((vec2i) { state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
+			size += sprintf(buffer + size, "ltrig=%d,rtrig=%d,lthumbx=%d,lthumby=%d,rthumbx=%d,rthumby=%d", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, left_stick.x, left_stick.y, right_stick.x, right_stick.y);
 
 			SetEnvironmentVariable(varName, buffer);
 		} else {
