@@ -14,12 +14,7 @@
 #include <malloc.h>
 
 #include "Injector.h"
-
-char* readenv(const char* name) {
-	static TCHAR buffer[127];
-	GetEnvironmentVariable(name, buffer, sizeof buffer);
-	return _strdup(buffer); // memory leaks go brr
-}
+#include "Utilities.h"
 
 std::atomic<bool> shouldShutdown = FALSE;
 
@@ -30,28 +25,37 @@ BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 	return TRUE;
 }
 
-DWORD Process() {
+WNDPROC origWndProc = NULL;
+
+LRESULT WndHook(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	if (message == WM_CLOSE) {
+		MessageBox(hWnd, "Closing!", "Closing", 0);
+		shouldShutdown = TRUE;
+	}
+
+	return CallWindowProc(origWndProc, hWnd, message, wParam, lParam);
+}
+
+DWORD CALLBACK Process(void *data) {
 	Sleep(250);
+
+	origWndProc = (WNDPROC)SetWindowLongPtr(GetConsoleWindow(), -4, (LONG_PTR)WndHook);
 
 	if (GetEnvironmentVariable("discordappid", NULL, 0) == 0) return TRUE;
 	SetConsoleCtrlHandler(ConsoleCloseHandler, TRUE);
 
 	DiscordEventHandlers handlers;
-	memset(&handlers, 0, sizeof(handlers));
+	ZeroMemory(&handlers, sizeof(DiscordEventHandlers));
+
 	Discord_Initialize(readenv("discordappid"), &handlers, 1, NULL);
 
 	DiscordRichPresence discordPresence;
 	ZeroMemory(&discordPresence, sizeof(discordPresence));
 
-	discordPresence.state = readenv("discordstate");
-	discordPresence.details = readenv("discorddetails");
 	discordPresence.startTimestamp = time(0);
 	discordPresence.endTimestamp = 0;
-	discordPresence.largeImageKey = readenv("discordlargeimg");
-	discordPresence.largeImageText = readenv("discordlargeimgtxt");
-	discordPresence.smallImageKey = readenv("discordsmallimg");
-	discordPresence.smallImageText = readenv("discordsmallimgtxt");
-	discordPresence.instance = 1;
+	discordPresence.instance = 0;
 	Discord_UpdatePresence(&discordPresence);
 
 	while (1) {
@@ -68,7 +72,10 @@ DWORD Process() {
 
 		if (shouldShutdown == TRUE) break;
 
+#ifdef DISCORD_DISABLE_IO_THREAD
 		Discord_UpdateConnection();
+#endif
+		Discord_RunCallbacks();
 		Sleep(500);
 	}
 

@@ -12,6 +12,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7BD5A477-048C-45DC-B79A-E87F22A233F3}"
 	ProjectSection(SolutionItems) = preProject
 		shared_stuff\Injector.h = shared_stuff\Injector.h
+		shared_stuff\Utilities.h = shared_stuff\Utilities.h
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mdev", "mdev", "{5A8CA87A-8553-472B-AF6B-D7AB1A6928D4}"

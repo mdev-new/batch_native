@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "Injector.h"
+#include "Utilities.h"
 
 #define GETINPUT_SUB
 
@@ -16,21 +17,6 @@
 
 // not downloading DDK for this :)
 long RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation);
-
-PCHAR GETINPUT_SUB itoa_(int i) {
-	static char buffer[21] = { 0 };
-	ZeroMemory(buffer, 21);
-
-	char* c = buffer + 19; // buffer[20] must be \0
-	int x = abs(i);
-
-	do {
-		*--c = 48 + x % 10;
-	} while (x && (x /= 10));
-
-	if (i < 0) *--c = 45;
-	return c;
-}
 
 int GETINPUT_SUB my_ceil(float num) {
 	int a = num;
@@ -41,16 +27,8 @@ int GETINPUT_SUB my_ceil(float num) {
 	return a;
 }
 
-long GETINPUT_SUB getenvnum(const char* name) {
-	static char buffer[32] = { 0 };
-	return
-		GetEnvironmentVariable(name, buffer, sizeof(buffer))
-		? atol(buffer)
-		: 0;
-}
-
 // i was way too lazy to check for values individually, so this was created
-// this technically disallows key code 0xFF but once that becomes a problem
+// this technically disallows key code 0xFF in some cases but once that becomes a problem
 // i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
 BYTE conversion_table[256] = {
 	//        0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
@@ -136,7 +114,63 @@ char* number_to_controller[] = {
 	"btn_y"
 };
 
-VOID GETINPUT_SUB PROCESS_CONTROLLER() {
+typedef struct _pair {
+	int first, second;
+} pair;
+
+pair process_stick(pair axes, int deadzone) {
+	int dx = deadzone * abs(axes.first);
+	int dy = deadzone * abs(axes.second);
+
+	pair result = axes;
+	if (abs(result.first) < dx) result.first = 0;
+	if (abs(result.second) < dy) result.second = 0;
+
+	return result;
+}
+
+pair old_process_stick(pair axes, int deadzone) {
+	int x = 0, y = 0;
+	int abs_inx = abs(axes.first);
+	int abs_iny = abs(axes.second);
+
+	if (abs_inx && abs_inx > deadzone) x = axes.first;
+	if (abs_iny && abs_iny > deadzone) y = axes.second;
+
+#ifdef divide
+	const int divider = 61;
+	x = x / (deadzone / divider);
+	y = y / (deadzone / divider);
+#endif
+
+	return (pair) { x, y };
+}
+
+pair process_stick2(pair axes, short deadzone) {
+	if ((axes.first < deadzone && axes.first > -deadzone) && (axes.second < deadzone && axes.second > -deadzone))
+	{
+		axes.first = 0;
+		axes.second = 0;
+	}
+
+	return axes;
+}
+
+pair process_stick3(pair axes, short deadzone) {
+
+	if (axes.first * axes.first < deadzone * deadzone) {
+		axes.first = 0;
+	}
+
+	if (axes.second * axes.second < deadzone * deadzone) {
+		axes.second = 0;
+	}
+
+
+	return axes;
+}
+
+VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 	static char buffer[256] = { 0 };
 	static char varName[16] = { 'c', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r', 0, 0, 0, 0, 0, 0 };
 	XINPUT_STATE state;
@@ -158,14 +192,23 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER() {
 			ZeroMemory(buffer, sizeof buffer);
 			size = 0;
 
+			int result;
 			for (WORD var = 0; var < 14; var++) {
-				if (state.Gamepad.wButtons & list[var]) {
+				if (result = (state.Gamepad.wButtons & list[var])) {
+					if (size && result) buffer[size++] = ',';
+
 					char* ptr = number_to_controller[var];
-					size += sprintf(buffer + size, "-%s", ptr);
+					size += sprintf(buffer + size, "%s", ptr);
 				}
 			}
 
-			size += sprintf(buffer + size, "-ltrig=%d-rtrig=%d-lthumbx=%d-lthumby=%d-rthumbx=%d-rthumby=%d-", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, state.Gamepad.sThumbLX, state.Gamepad.sThumbLY, state.Gamepad.sThumbRX, state.Gamepad.sThumbRY);
+			if (state.Gamepad.wButtons) {
+				buffer[size++] = '|';
+			}
+
+			pair left_stick = process_stick3((pair){ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
+			pair right_stick = process_stick3((pair) { state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
+			size += sprintf(buffer + size, "ltrig=%d,rtrig=%d,lthumbx=%d,lthumby=%d,rthumbx=%d,rthumby=%d", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, left_stick.first, left_stick.second, right_stick.first, right_stick.second);
 
 			SetEnvironmentVariable(varName, buffer);
 		} else {
@@ -197,6 +240,11 @@ DWORD GETINPUT_SUB CALLBACK MouseMessageThread(void* data) {
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void* data) {
+	ENV("wheeldelta", "0");
+	ENV("mousexpos", "0");
+	ENV("mouseypos", "0");
+	ENV("click", "0");
+
 	Sleep(250);
 
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -205,7 +253,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 	BYTE mouseclick;
 
-	CONSOLE_FONT_INFO info;
+	CONSOLE_FONT_INFO info = { 0 };
 	COORD* fontSz = &info.dwFontSize;
 	POINT pt;
 
@@ -233,6 +281,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	int rasterx = getenvnum("rasterx");
 	int rastery = getenvnum("rastery");
 	const bool isRaster = rasterx && rastery;
+
+	const float deadzone = (float)getenvnum_ex("ctrl_deadzone", 24) / 100.f;
 
 	if (isRaster) {
 		CONSOLE_FONT_INFOEX cfi = {
@@ -266,10 +316,15 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	mode &= ~ENABLE_PROCESSED_INPUT;
 	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
 
-	ENV("wheeldelta", "0");
 	CreateThread(NULL, 0, MouseMessageThread, NULL, 0, NULL);
 
+	const int fps = getenvnum_ex("getinput_tps", 40);
+
+	unsigned __int64 begin, end;
+
 	while (TRUE) {
+		begin = GetTickCount64();
+
 		SetConsoleMode(hIn, mode);
 		GetCurrentConsoleFont(hOut, FALSE, &info);
 
@@ -316,10 +371,11 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		if (hCon == GetForegroundWindow()) {
 			ENV("click", itoa_(mouseclick));
 			process_keys();
-			PROCESS_CONTROLLER();
+			PROCESS_CONTROLLER(deadzone);
 		}
 
-		Sleep(1000 / 40);
+		end = GetTickCount64();
+		Sleep((1000 / fps) - max(end - begin, 0));
 	}
 }
 

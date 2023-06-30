@@ -8,13 +8,9 @@
 #include <tuple>
 
 #include "Injector.h"
+#include "Utilities.h"
 
 #define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
-
-long getenvnum(const char* name) {
-	static char buffer[32] = { 0 };
-	return GetEnvironmentVariable(name, buffer, sizeof(buffer)) ? atol(buffer) : 0;
-}
 
 template<typename T>
 void remove(std::vector<T>& v, const T& target)

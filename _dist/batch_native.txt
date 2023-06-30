@@ -30,6 +30,8 @@ Last update: 25th of June, 2023
 (i)   noresize: 1 to disable resizing
 (i)   rasterx, rastery: turn on the raster font and set its size to x and y
 (i)   limitMouseX, limitMouseY: limit the x and y range of mouse, unsets mousexpos or mouseypos if out of range
+(i)   ctrl_deadzone: deadzone for the controller thumbsticks in %'s
+(i)   getinput_tps: how many times should the main loop run per second
 
 All input variables are *optional* and must be set before injecting.
 
@@ -91,7 +93,7 @@ MousieDev - extensive rewrite, making it a dll, main maintainer
 Copyright (C) 2021-2023 batch_native authors.  All rights reserved.
 
 Do whatever with it as long as your forks are public. Making an pull request
-to the original repo would be appreciated.
+to the original repo would be very much appreciated.
 
 We do reserve the right to alter this document at any time without any prior
 notice. You may not alter this statement.
