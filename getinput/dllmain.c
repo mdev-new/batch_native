@@ -21,11 +21,7 @@ long RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation);
 
 int GETINPUT_SUB my_ceil(float num) {
 	int a = num;
-	if ((float)a != num) {
-		return a + 1;
-	}
-
-	return a;
+	return ((float)a != num) ? a + 1 : a;
 }
 
 // i was way too lazy to check for values individually, so this was created
@@ -323,8 +319,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 			prevScale = scale;
 		}
 
-		mousx = my_ceil((float)pt.x / ((float)fontSz->X * fscalex) - 1.f);
-		mousy = my_ceil((float)pt.y / ((float)fontSz->Y * fscaley) - 1.f);
+		mousx = my_ceil((float)pt.x / ((float)fontSz->X * fscalex));
+		mousy = my_ceil((float)pt.y / ((float)fontSz->Y * fscaley));
 
 		ENV("mousexpos", (!bLimitMouse || (bLimitMouse && mousx <= lmx)) ? itoa_(mousx) : NULL);
 		ENV("mouseypos", (!bLimitMouse || (bLimitMouse && mousy <= lmy)) ? itoa_(mousy) : NULL);
@@ -336,7 +332,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		}
 
 		took = GetTickCount64() - begin;
-		Sleep(sleep - took);
+		Sleep(max(0, sleep - took));
 	}
 }
 

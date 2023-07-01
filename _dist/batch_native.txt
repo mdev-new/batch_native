@@ -33,7 +33,7 @@ Last update: 25th of June, 2023
 (i)   noresize: 1 to disable resizing
 (i)   rasterx, rastery: turn on the raster font and set its size to x and y
 (i)   limitMouseX, limitMouseY: limit the x and y range of mouse, unsets mousexpos or mouseypos if out of range
-(i)   ctrl_deadzone: deadzone for the controller thumbsticks in %'s
+(i)   ctrl_deadzone: deadzone for the controllers' thumbsticks in %'s
 (i)   getinput_tps: how many times should the main loop run per second
 
 All input variables are *optional* and must be set before injecting.
