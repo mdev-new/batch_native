@@ -27,6 +27,7 @@ BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 
 WNDPROC origWndProc = NULL;
 
+// this is most likely broken.
 LRESULT WndHook(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	if (message == WM_CLOSE) {
@@ -56,7 +57,6 @@ DWORD CALLBACK Process(void *data) {
 	discordPresence.startTimestamp = time(0);
 	discordPresence.endTimestamp = 0;
 	discordPresence.instance = 0;
-	Discord_UpdatePresence(&discordPresence);
 
 	while (1) {
 		if (GetEnvironmentVariable("discordupdate", NULL, 0)) {

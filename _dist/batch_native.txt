@@ -2,6 +2,9 @@
                                  Batch native                                 
 ==============================================================================
 
+This is the documentation for the official Batch native modules.
+For documentation on community-made modules, contact their respective authors.
+
 Written by MousieDev & Kenan238
 Last update: 25th of June, 2023
 

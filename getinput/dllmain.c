@@ -1,4 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
+#define STRICT
 #include <windows.h>
 
 #include <xinput.h>
@@ -97,21 +98,26 @@ VOID GETINPUT_SUB process_keys() {
 	SetEnvironmentVariable("keyspressed", buffer);
 }
 
-char* number_to_controller[] = {
-	"dpad_up",
-	"dpad_down",
-	"dpad_left",
-	"dpad_right",
-	"start",
-	"back",
-	"lthumb",
-	"rthumb",
-	"lshouldr",
-	"rshouldr",
-	"btn_a",
-	"btn_b",
-	"btn_x",
-	"btn_y"
+typedef struct _controller_value {
+	WORD bitmask;
+	char* str;
+} controller_value;
+
+controller_value ctrl_values[] = {
+	{ 0x0001, "dpad_up" },
+	{ 0x0002, "dpad_down" },
+	{ 0x0004, "dpad_left" },
+	{ 0x0008, "dpad_right" },
+	{ 0x0010, "start" },
+	{ 0x0020, "back" },
+	{ 0x0040, "lthumb" },
+	{ 0x0080, "rthumb" },
+	{ 0x0100, "lshouldr" },
+	{ 0x0200, "rshouldr" },
+	{ 0x1000, "btn_a" },
+	{ 0x2000, "btn_b" },
+	{ 0x4000, "btn_x" },
+	{ 0x8000, "btn_y" }
 };
 
 typedef struct _vec2i {
@@ -134,15 +140,9 @@ vec2i process_stick(vec2i axes, short deadzone) {
 
 VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 	static char buffer[256] = { 0 };
-	static char varName[16] = { 'c', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r', 0, 0, 0, 0, 0, 0 };
+	static char varName[16] = "controller";
 	XINPUT_STATE state;
 	DWORD dwResult, size;
-
-	// pretend like this doesn't exist
-	const static int list[] = {
-		0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040,
-		0x0080, 0x0100, 0x0200, 0x1000, 0x2000, 0x4000, 0x8000
-	};
 
 	for (char i = 0; i < 4; i++) {
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
@@ -156,11 +156,10 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 
 			int result;
 			for (WORD var = 0; var < 14; var++) {
-				if (result = (state.Gamepad.wButtons & list[var])) {
+				if (result = (state.Gamepad.wButtons & ctrl_values[var].bitmask)) {
 					if (size && result) buffer[size++] = ',';
 
-					char* ptr = number_to_controller[var];
-					size += sprintf(buffer + size, "%s", ptr);
+					size += sprintf(buffer + size, "%s", ctrl_values[var].str);
 				}
 			}
 
@@ -209,9 +208,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 	Sleep(250);
 
-	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-	HWND hCon = GetConsoleWindow();
+	const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	const HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+	const HWND hCon = GetConsoleWindow();
 
 	BYTE mouseclick;
 
@@ -233,15 +232,15 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		HMODULE shcore = LoadLibraryA("shcore.dll");
 		GetScaleFactorForMonitorProc = GetProcAddress(shcore, "GetScaleFactorForMonitor");
 		SetProcessDpiAwarenessProc = GetProcAddress(shcore, "SetProcessDpiAwareness");
-		CloseHandle(shcore);
+		FreeLibrary(shcore);
 	}
 
-	int lmx = getenvnum("limitMouseX");
-	int lmy = getenvnum("limitMouseY");
+	const int lmx = getenvnum("limitMouseX");
+	const int lmy = getenvnum("limitMouseY");
 	const bool bLimitMouse = lmx && lmy;
 
-	int rasterx = getenvnum("rasterx");
-	int rastery = getenvnum("rastery");
+	const int rasterx = getenvnum("rasterx");
+	const int rastery = getenvnum("rastery");
 	const bool isRaster = rasterx && rastery;
 
 	const float deadzone = (float)getenvnum_ex("ctrl_deadzone", 24) / 100.f;
@@ -280,9 +279,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 	CreateThread(NULL, 0, MouseMessageThread, NULL, 0, NULL);
 
-	const int fps = getenvnum_ex("getinput_tps", 40);
+	const int sleep = 1000 / getenvnum_ex("getinput_tps", 40);
 
-	unsigned __int64 begin, end;
+	unsigned __int64 begin, took;
 
 	while (TRUE) {
 		begin = GetTickCount64();
@@ -336,8 +335,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 			PROCESS_CONTROLLER(deadzone);
 		}
 
-		end = GetTickCount64();
-		Sleep((1000 / fps) - max(end - begin, 0));
+		took = GetTickCount64() - begin;
+		Sleep(sleep - took);
 	}
 }
 

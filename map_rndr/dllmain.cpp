@@ -10,18 +10,10 @@
 #include "Injector.h"
 #include "Utilities.h"
 
-#define CreateThreadS(funptr) CreateThread(0,0,funptr,0,0,0)
-
 template<typename T>
-void remove(std::vector<T>& v, const T& target)
+void remove(std::vector<T>** v, const T& target)
 {
-	v.erase(std::remove(v.begin(), v.end(), target), v.end());
-}
-
-template<typename T>
-void remove(std::vector<T>* v, const T& target)
-{
-	v->erase(std::remove(v->begin(), v->end(), target), v->end());
+	(*v)->erase(std::remove((*v)->begin(), (*v)->end(), target), (*v)->end());
 }
 
 int load_map(std::vector<char>** vec, char* fname) {
@@ -39,8 +31,8 @@ int load_map(std::vector<char>** vec, char* fname) {
 	CloseHandle(hFile);
 
 	// remove cr, lf
-	remove(*vec, '\x0D');
-	remove(*vec, '\x0A');
+	remove(vec, '\x0D');
+	remove(vec, '\x0A');
 
 	return size;
 }
