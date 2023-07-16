@@ -25,23 +25,8 @@ BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 	return TRUE;
 }
 
-WNDPROC origWndProc = NULL;
-
-// this is most likely broken.
-LRESULT WndHook(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	if (message == WM_CLOSE) {
-		MessageBox(hWnd, "Closing!", "Closing", 0);
-		shouldShutdown = TRUE;
-	}
-
-	return CallWindowProc(origWndProc, hWnd, message, wParam, lParam);
-}
-
 DWORD CALLBACK Process(void *data) {
 	Sleep(250);
-
-	origWndProc = (WNDPROC)SetWindowLongPtr(GetConsoleWindow(), -4, (LONG_PTR)WndHook);
 
 	if (GetEnvironmentVariable("discordappid", NULL, 0) == 0) return TRUE;
 	SetConsoleCtrlHandler(ConsoleCloseHandler, TRUE);
@@ -49,7 +34,7 @@ DWORD CALLBACK Process(void *data) {
 	DiscordEventHandlers handlers;
 	ZeroMemory(&handlers, sizeof(DiscordEventHandlers));
 
-	Discord_Initialize(readenv("discordappid"), &handlers, 1, NULL);
+	Discord_Initialize(readenv("discordappid"), &handlers, FALSE, NULL);
 
 	DiscordRichPresence discordPresence;
 	ZeroMemory(&discordPresence, sizeof(discordPresence));
@@ -58,7 +43,7 @@ DWORD CALLBACK Process(void *data) {
 	discordPresence.endTimestamp = 0;
 	discordPresence.instance = 0;
 
-	while (1) {
+	while (!shouldShutdown) {
 		if (GetEnvironmentVariable("discordupdate", NULL, 0)) {
 			SetEnvironmentVariable("discordupdate", NULL);
 			discordPresence.state = readenv("discordstate");
@@ -70,15 +55,13 @@ DWORD CALLBACK Process(void *data) {
 			Discord_UpdatePresence(&discordPresence);
 		}
 
-		if (shouldShutdown == TRUE) break;
-
 #ifdef DISCORD_DISABLE_IO_THREAD
 		Discord_UpdateConnection();
 #endif
 		Discord_RunCallbacks();
 		Sleep(500);
 	}
-
+	MessageBox(NULL, "Out of the loop!", "Information", MB_ICONINFORMATION | MB_OK);
 	Discord_ClearPresence();
 	Discord_Shutdown();
 	return 0;

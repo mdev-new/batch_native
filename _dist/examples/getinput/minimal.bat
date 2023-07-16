@@ -2,6 +2,8 @@
 setlocal enabledelayedexpansion
 
 SET BATCHNATIVE_BIN_HOME=..\..
+set /a rasterx=rastery=8
+set /a limitMouseX=limitMouseY=40
 rundll32 %BATCHNATIVE_BIN_HOME%\getinput.dll,inject
 
 echo Variables are displayed in the title bar
@@ -19,5 +21,7 @@ for /l %%c in (1,1,4) do (
 		)
 	)
 )
+
+if "!keyspressed!"=="-32-" set /a rasterx=10,rastery=18
 
 goto :a

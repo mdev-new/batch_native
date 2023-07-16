@@ -13,6 +13,8 @@
 
 #define GETINPUT_SUB
 
+//#define DISABLE_SCALING
+
 // i am too lazy lmfao
 #define ENV SetEnvironmentVariable
 
@@ -194,6 +196,8 @@ DWORD GETINPUT_SUB CALLBACK MouseMessageThread(void* data) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	return 0;
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void* data) {
@@ -214,45 +218,40 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 	COORD* fontSz = &info.dwFontSize;
 	POINT pt;
 
-	RTL_OSVERSIONINFOW osVersionInfo = { 0 };
-	osVersionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOW);
+#ifndef DISABLE_SCALING
+	DWORD majorVer = 0;
+	RtlGetNtVersionNumbers(&majorVer, NULL, NULL);
 
-	// ntdll.dll
-	RtlGetVersion(&osVersionInfo);
-	const bool bWin10 = osVersionInfo.dwMajorVersion >= 10;
+	bool bWin10 = majorVer >= 10;
 
 	HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int*) = NULL;
 	HRESULT(*SetProcessDpiAwarenessProc)(int) = NULL;
 
 	if (bWin10) {
-		HMODULE shcore = LoadLibraryA("shcore.dll");
-		GetScaleFactorForMonitorProc = GetProcAddress(shcore, "GetScaleFactorForMonitor");
-		SetProcessDpiAwarenessProc = GetProcAddress(shcore, "SetProcessDpiAwareness");
-		FreeLibrary(shcore);
+		// for some odd reason loading the library first didn't work
+		GetScaleFactorForMonitorProc = GetProcAddress(LoadLibraryA("shcore.dll"), "GetScaleFactorForMonitor");
+		SetProcessDpiAwarenessProc = GetProcAddress(LoadLibraryA("shcore.dll"), "SetProcessDpiAwareness");
+
+		if (GetScaleFactorForMonitorProc == NULL || SetProcessDpiAwarenessProc == NULL) {
+			bWin10 = FALSE;
+			MessageBox(NULL, "Scaling will not work.", "Happy little message", MB_ICONERROR | MB_OK);
+		}
 	}
+#endif
 
-	const int lmx = getenvnum("limitMouseX");
-	const int lmy = getenvnum("limitMouseY");
-	const bool bLimitMouse = lmx && lmy;
-
-	const int rasterx = getenvnum("rasterx");
-	const int rastery = getenvnum("rastery");
-	const bool isRaster = rasterx && rastery;
+	int lmx, lmy, rasterx, rastery;
+	bool bLimitMouse, isRaster;
 
 	const float deadzone = (float)getenvnum_ex("ctrl_deadzone", 24) / 100.f;
 
-	if (isRaster) {
-		CONSOLE_FONT_INFOEX cfi = {
-			.cbSize = sizeof(CONSOLE_FONT_INFOEX),
-			.nFont = 0,
-			.dwFontSize = { rasterx, rastery },
-			.FontFamily = FF_DONTCARE,
-			.FontWeight = FW_NORMAL,
-			.FaceName = L"Terminal"
-		};
-
-		SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
-	}
+	CONSOLE_FONT_INFOEX cfi = {
+		.cbSize = sizeof(CONSOLE_FONT_INFOEX),
+		.nFont = 0,
+		.dwFontSize = {0, 0},
+		.FontFamily = FF_DONTCARE,
+		.FontWeight = FW_NORMAL,
+		.FaceName = L"Terminal"
+	};
 
 	if (getenvnum("noresize") == 1) {
 		DWORD style = GetWindowLong(hCon, GWL_STYLE);
@@ -260,13 +259,17 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		SetWindowLong(hCon, GWL_STYLE, style);
 	}
 
+#ifndef DISABLE_SCALING
 	if (bWin10) {
 		SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
 	}
+#endif
 
 	int scale = 100, prevScale = scale, roundedScale;
-	float fscalex = 1.0, fscaley = fscalex;
+	float fscalex = 1.0f, fscaley = fscalex;
 	int mousx, mousy;
+	WORD prevRasterX = -1;
+	WORD prevRasterY = -1;
 
 	DWORD mode = 0;
 	GetConsoleMode(hIn, &mode);
@@ -285,10 +288,12 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		SetConsoleMode(hIn, mode);
 		GetCurrentConsoleFont(hOut, FALSE, &info);
 
+#ifndef DISABLE_SCALING
 		if (bWin10) {
 			HMONITOR monitor = MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST);
 			GetScaleFactorForMonitorProc(monitor, &scale);
 		}
+#endif
 
 		GetPhysicalCursorPos(&pt);
 		ScreenToClient(hCon, &pt);
@@ -302,9 +307,28 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 			mouseclick |= mouseclick & 0b11;
 		}
 
+		lmx = getenvnum("limitMouseX");
+		lmy = getenvnum("limitMouseY");
+		bLimitMouse = lmx && lmy;
+
+		rasterx = getenvnum("rasterx");
+		rastery = getenvnum("rastery");
+		isRaster = rasterx && rastery;
+
+		// lets not set the font every frame
+		if (isRaster && (prevRasterX != rasterx || prevRasterY != rastery)) {
+			cfi.dwFontSize = (COORD){ rasterx, rastery };
+			SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+			prevRasterX = rasterx;
+			prevRasterY = rastery;
+		}
+
+#ifndef DISABLE_SCALING
 		if (bWin10 && prevScale != scale) {
 			// this somehow (mostly) works, !!DO NOT TOUCH!!
-			if (!isRaster) fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
+			if (!isRaster) {
+				fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
+			}
 			else {
 				roundedScale = (scale - 100 * (scale / 100));
 				if (roundedScale < 50) {
@@ -318,6 +342,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 			prevScale = scale;
 		}
+#endif
 
 		mousx = my_ceil((float)pt.x / ((float)fontSz->X * fscalex));
 		mousy = my_ceil((float)pt.y / ((float)fontSz->Y * fscaley));

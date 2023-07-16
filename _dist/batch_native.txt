@@ -28,17 +28,16 @@ Last update: 25th of June, 2023
 (o)   mousexpos, mouseypos: mouse position measured in cells
 (o)   click: mouse click ; left=1,right=2,middle=4
 (o)   wheeldelta: up=-1,down=1 ; reset this manually once you process
-(o)   keyspressed*: is formatted like this: -keycode1-keycode2-keycode3-
-(o)   controller#: xbox controller # state ; # = number between 1 and 4
+(o)   keyspressed: is formatted like this: -keycode1-keycode2-keycode3- ; uses virtual key codes, not characters, keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes; that means keyboard layouts do not matter, the physical location of keys is considered
+(o)   controller#: xbox controller with index # state ; # = number between 1 and 4
 (i)   noresize: 1 to disable resizing
 (i)   rasterx, rastery: turn on the raster font and set its size to x and y
 (i)   limitMouseX, limitMouseY: limit the x and y range of mouse, unsets mousexpos or mouseypos if out of range
 (i)   ctrl_deadzone: deadzone for the controllers' thumbsticks in %'s
 (i)   getinput_tps: how many times should the main loop run per second
 
-All input variables are *optional* and must be set before injecting.
+All input variables are *optional*
 
-*   uses virtual key codes, not characters (raw input), keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes; that means keyboard layouts do not matter, the physical location of keys is considered
 
 -- Discord RPC --
 (i)   discordappid - your own app id (created on the discord developer portal)
