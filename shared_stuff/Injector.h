@@ -11,7 +11,7 @@
 #endif
 
 #define BasicDllMainImpl(ThreadProcName) \
-BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {\
+NOMANGLE __declspec(dllexport) BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {\
 	if (dwReason == DLL_PROCESS_ATTACH) {\
 		DisableThreadLibraryCalls(hInst);\
 		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadProcName, NULL, 0, NULL);\
@@ -53,8 +53,10 @@ NOMANGLE __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, 
 
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, getppid());
 
-	LPVOID lpBaseAddress = VirtualAllocEx(hProcess, NULL, lstrlen(filename), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	WriteProcessMemory(hProcess, lpBaseAddress, filename, lstrlen(filename), NULL);
+	int filename_len = lstrlen(filename);
+
+	LPVOID lpBaseAddress = VirtualAllocEx(hProcess, NULL, filename_len, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	WriteProcessMemory(hProcess, lpBaseAddress, filename, filename_len, NULL);
 
 	LPTHREAD_START_ROUTINE startAddr = (LPTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
 	HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, startAddr, lpBaseAddress, 0, NULL);

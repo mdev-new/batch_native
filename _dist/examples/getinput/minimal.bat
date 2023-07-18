@@ -1,6 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
+mode 88,55
+
 SET BATCHNATIVE_BIN_HOME=..\..
 set /a rasterx=rastery=8
 set /a limitMouseX=limitMouseY=40

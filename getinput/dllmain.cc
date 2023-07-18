@@ -8,23 +8,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <atomic>
+
 #include "Injector.h"
 #include "Utilities.h"
 
-#define GETINPUT_SUB
-
-//#define DISABLE_SCALING
+#define GETINPUT_SUB __declspec(noinline)
 
 // i am too lazy lmfao
 #define ENV SetEnvironmentVariable
 
-// not downloading DDK for this :)
-long RtlGetVersion(RTL_OSVERSIONINFOW * lpVersionInformation);
-
-int GETINPUT_SUB my_ceil(float num) {
-	int a = num;
-	return ((float)a != num) ? a + 1 : a;
-}
+extern "C" void RtlGetNtVersionNumbers(DWORD*, DWORD*, DWORD*);
 
 // i was way too lazy to check for values individually, so this was created
 // this technically disallows key code 0xFF in some cases but once that becomes a problem
@@ -98,7 +92,7 @@ VOID GETINPUT_SUB process_keys() {
 
 typedef struct _controller_value {
 	WORD bitmask;
-	char* str;
+	const char* str;
 } controller_value;
 
 controller_value ctrl_values[] = {
@@ -165,8 +159,8 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 				buffer[size++] = '|';
 			}
 
-			vec2i left_stick = process_stick((vec2i){ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
-			vec2i right_stick = process_stick((vec2i) { state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
+			vec2i left_stick = process_stick({ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
+			vec2i right_stick = process_stick({ state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
 			size += sprintf(buffer + size, "ltrig=%d,rtrig=%d,lthumbx=%d,lthumby=%d,rthumbx=%d,rthumby=%d", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, left_stick.x, left_stick.y, right_stick.x, right_stick.y);
 
 			SetEnvironmentVariable(varName, buffer);
@@ -176,25 +170,69 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 	}
 }
 
-LRESULT GETINPUT_SUB CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-	MSLLHOOKSTRUCT* info = (MSLLHOOKSTRUCT*)lParam;
-	short wheelDelta = GET_WHEEL_DELTA_WPARAM(info->mouseData);
+std::atomic_bool inFocus = true;
 
-	if (wheelDelta != 0) {
-		wheelDelta /= WHEEL_DELTA;
-		ENV("wheeldelta", itoa_(wheelDelta));
+DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
+	// i don't like this. at all.
+	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+	HWND hCon = GetConsoleWindow();
+
+	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
+	
+	while (1) {
+		if (hCon == GetForegroundWindow()) { // atleast a tiny optimization
+			SetConsoleMode(hStdIn, mode);
+		} else {
+			Sleep(40);
+		}
 	}
 
-	return CallNextHookEx(NULL, nCode, wParam, lParam);
+	return 0;
 }
 
-DWORD GETINPUT_SUB CALLBACK MouseMessageThread(void* data) {
-	HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
+void MouseEventProc(MOUSE_EVENT_RECORD& record) {
+	switch (record.dwEventFlags) {
+	case MOUSE_MOVED:
+		ENV("mousexpos", itoa_(record.dwMousePosition.X + 1));
+		ENV("mouseypos", itoa_(record.dwMousePosition.Y + 1));
+		break;
 
-	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+	case MOUSE_WHEELED:
+		ENV("wheeldelta", itoa_((signed short)(HIWORD(record.dwButtonState)) / WHEEL_DELTA));
+		break;
+
+	default: break;
+	}
+}
+
+DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
+	// i don't like this, but if it means completely working mouse, i'll do it
+
+	INPUT_RECORD ir_buffer[256];
+	DWORD read, i;
+
+	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+
+	while (1) {
+		ReadConsoleInput(hStdIn, ir_buffer, 256, &read);
+
+		for (i = 0; i < read; i++) {
+			switch (ir_buffer[i].EventType) {
+			case MOUSE_EVENT:
+				MouseEventProc(ir_buffer[i].Event.MouseEvent);
+				break;
+
+			case FOCUS_EVENT:
+				inFocus = ir_buffer[i].Event.FocusEvent.bSetFocus;
+				break;
+
+			case WINDOW_BUFFER_SIZE_EVENT:
+			case MENU_EVENT:
+			case KEY_EVENT: // keys are processed async
+			default:
+				break;
+			}
+		}
 	}
 
 	return 0;
@@ -214,32 +252,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 	BYTE mouseclick;
 
-	CONSOLE_FONT_INFO info = { 0 };
-	COORD* fontSz = &info.dwFontSize;
-	POINT pt;
-
-#ifndef DISABLE_SCALING
-	DWORD majorVer = 0;
-	RtlGetNtVersionNumbers(&majorVer, NULL, NULL);
-
-	bool bWin10 = majorVer >= 10;
-
-	HRESULT(*GetScaleFactorForMonitorProc)(HMONITOR, int*) = NULL;
-	HRESULT(*SetProcessDpiAwarenessProc)(int) = NULL;
-
-	if (bWin10) {
-		// for some odd reason loading the library first didn't work
-		GetScaleFactorForMonitorProc = GetProcAddress(LoadLibraryA("shcore.dll"), "GetScaleFactorForMonitor");
-		SetProcessDpiAwarenessProc = GetProcAddress(LoadLibraryA("shcore.dll"), "SetProcessDpiAwareness");
-
-		if (GetScaleFactorForMonitorProc == NULL || SetProcessDpiAwarenessProc == NULL) {
-			bWin10 = FALSE;
-			MessageBox(NULL, "Scaling will not work.", "Happy little message", MB_ICONERROR | MB_OK);
-		}
-	}
-#endif
-
-	int lmx, lmy, rasterx, rastery;
+	short lmx, lmy, rasterx, rastery;
 	bool bLimitMouse, isRaster;
 
 	const float deadzone = (float)getenvnum_ex("ctrl_deadzone", 24) / 100.f;
@@ -257,26 +270,14 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		DWORD style = GetWindowLong(hCon, GWL_STYLE);
 		style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
 		SetWindowLong(hCon, GWL_STYLE, style);
+		DrawMenuBar(hCon);
 	}
 
-#ifndef DISABLE_SCALING
-	if (bWin10) {
-		SetProcessDpiAwarenessProc(DPI_AWARENESS_UNAWARE);
-	}
-#endif
-
-	int scale = 100, prevScale = scale, roundedScale;
-	float fscalex = 1.0f, fscaley = fscalex;
-	int mousx, mousy;
 	WORD prevRasterX = -1;
 	WORD prevRasterY = -1;
 
-	DWORD mode = 0;
-	GetConsoleMode(hIn, &mode);
-	mode &= ~ENABLE_PROCESSED_INPUT;
-	mode &= ENABLE_EXTENDED_FLAGS | (~ENABLE_QUICK_EDIT_MODE);
-
-	CreateThread(NULL, 0, MouseMessageThread, NULL, 0, NULL);
+	CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
+	CreateThread(NULL, 0, MousePosThread, NULL, 0, NULL);
 
 	const int sleep = 1000 / getenvnum_ex("getinput_tps", 40);
 
@@ -284,19 +285,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 	while (TRUE) {
 		begin = GetTickCount64();
-
-		SetConsoleMode(hIn, mode);
-		GetCurrentConsoleFont(hOut, FALSE, &info);
-
-#ifndef DISABLE_SCALING
-		if (bWin10) {
-			HMONITOR monitor = MonitorFromWindow(hCon, MONITOR_DEFAULTTONEAREST);
-			GetScaleFactorForMonitorProc(monitor, &scale);
-		}
-#endif
-
-		GetPhysicalCursorPos(&pt);
-		ScreenToClient(hCon, &pt);
 
 		mouseclick =
 			(GetKeyState(VK_LBUTTON) & 0x80) >> 7 |
@@ -317,38 +305,11 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 		// lets not set the font every frame
 		if (isRaster && (prevRasterX != rasterx || prevRasterY != rastery)) {
-			cfi.dwFontSize = (COORD){ rasterx, rastery };
+			cfi.dwFontSize = { rasterx, rastery };
 			SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 			prevRasterX = rasterx;
 			prevRasterY = rastery;
 		}
-
-#ifndef DISABLE_SCALING
-		if (bWin10 && prevScale != scale) {
-			// this somehow (mostly) works, !!DO NOT TOUCH!!
-			if (!isRaster) {
-				fscalex = fscaley = (float)(scale) / 100.f; // this probably needs a little tweaking
-			}
-			else {
-				roundedScale = (scale - 100 * (scale / 100));
-				if (roundedScale < 50) {
-					fscalex = fscaley = (float)(((scale + 50) * 100) / 10000L);
-				}
-				else if (roundedScale > 50 && scale % 100 != 0) {
-					fscalex = (scale / 100L) + 1.f;
-					fscaley = (float)(scale - scale % 50) / 100.f;
-				}
-			}
-
-			prevScale = scale;
-		}
-#endif
-
-		mousx = my_ceil((float)pt.x / ((float)fontSz->X * fscalex));
-		mousy = my_ceil((float)pt.y / ((float)fontSz->Y * fscaley));
-
-		ENV("mousexpos", (!bLimitMouse || (bLimitMouse && mousx <= lmx)) ? itoa_(mousx) : NULL);
-		ENV("mouseypos", (!bLimitMouse || (bLimitMouse && mousy <= lmy)) ? itoa_(mousy) : NULL);
 
 		if (hCon == GetForegroundWindow()) {
 			ENV("click", itoa_(mouseclick));

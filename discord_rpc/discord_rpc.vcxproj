@@ -53,7 +53,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;DISCORDRPC_EXPORTS;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;DISCORD_WINDOWS;DISCORD_DISABLE_IO_THREAD;DISCORD_DYNAMIC_LIB;DISCORD_BUILDING_SDK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;DISCORDRPC_EXPORTS;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;DISCORD_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
