@@ -106,7 +106,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.c" />
+    <ClCompile Include="dllmain.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

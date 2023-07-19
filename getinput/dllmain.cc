@@ -4,7 +4,6 @@
 
 #include <xinput.h>
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -191,11 +190,22 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 }
 
 void MouseEventProc(MOUSE_EVENT_RECORD& record) {
+	int lmx = getenvnum("limitMouseX");
+	int lmy = getenvnum("limitMouseY");
+
+	int mouseX, mouseY;
+
 	switch (record.dwEventFlags) {
-	case MOUSE_MOVED:
-		ENV("mousexpos", itoa_(record.dwMousePosition.X + 1));
-		ENV("mouseypos", itoa_(record.dwMousePosition.Y + 1));
+	case MOUSE_MOVED: {
+		mouseX = record.dwMousePosition.X + 1;
+		mouseY = record.dwMousePosition.Y + 1;
+		if (lmx && mouseX > lmx) mouseX = 0;
+		if (lmy && mouseY > lmy) mouseY = 0;
+
+		ENV("mousexpos", itoa_(mouseX));
+		ENV("mouseypos", itoa_(mouseY));
 		break;
+	}
 
 	case MOUSE_WHEELED:
 		ENV("wheeldelta", itoa_((signed short)(HIWORD(record.dwButtonState)) / WHEEL_DELTA));
@@ -294,10 +304,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 		if (mouseclick && GetSystemMetrics(SM_SWAPBUTTON)) {
 			mouseclick |= mouseclick & 0b11;
 		}
-
-		lmx = getenvnum("limitMouseX");
-		lmy = getenvnum("limitMouseY");
-		bLimitMouse = lmx && lmy;
 
 		rasterx = getenvnum("rasterx");
 		rastery = getenvnum("rastery");
