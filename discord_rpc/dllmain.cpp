@@ -25,9 +25,7 @@ BOOL WINAPI ConsoleCloseHandler(DWORD dwCtrlType) {
 	return TRUE;
 }
 
-DWORD CALLBACK Process(void *data) {
-	Sleep(250);
-
+DWORD CALLBACK Process(void *) {
 	if (GetEnvironmentVariable("discordappid", NULL, 0) == 0) return TRUE;
 	SetConsoleCtrlHandler(ConsoleCloseHandler, TRUE);
 

@@ -12,6 +12,10 @@
 
 #define BasicDllMainImpl(ThreadProcName) \
 NOMANGLE __declspec(dllexport) BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {\
+	char name[MAX_PATH];\
+	GetModuleFileName(NULL, name, sizeof name);\
+	if(lstrcmp("rundll32.exe", name + lstrlen(name) - 12) == 0) return TRUE;\
+\
 	if (dwReason == DLL_PROCESS_ATTACH) {\
 		DisableThreadLibraryCalls(hInst);\
 		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadProcName, NULL, 0, NULL);\

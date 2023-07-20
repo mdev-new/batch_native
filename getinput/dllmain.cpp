@@ -174,12 +174,11 @@ std::atomic_bool inFocus = true;
 DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	// i don't like this. at all.
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
-	HWND hCon = GetConsoleWindow();
 
 	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
 	
 	while (1) {
-		if (hCon == GetForegroundWindow()) { // atleast a tiny optimization
+		if (inFocus) { // atleast a tiny optimization
 			SetConsoleMode(hStdIn, mode);
 		} else {
 			Sleep(40);
@@ -248,13 +247,11 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	return 0;
 }
 
-DWORD GETINPUT_SUB CALLBACK Process(void* data) {
+DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	ENV("wheeldelta", "0");
 	ENV("mousexpos", "0");
 	ENV("mouseypos", "0");
 	ENV("click", "0");
-
-	Sleep(250);
 
 	const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	const HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -262,8 +259,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 
 	BYTE mouseclick;
 
-	short lmx, lmy, rasterx, rastery;
-	bool bLimitMouse, isRaster;
+	short rasterx, rastery;
+	bool isRaster;
 
 	const float deadzone = (float)getenvnum_ex("ctrl_deadzone", 24) / 100.f;
 
@@ -317,7 +314,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void* data) {
 			prevRasterY = rastery;
 		}
 
-		if (hCon == GetForegroundWindow()) {
+		if (inFocus) {
 			ENV("click", itoa_(mouseclick));
 			process_keys();
 			PROCESS_CONTROLLER(deadzone);

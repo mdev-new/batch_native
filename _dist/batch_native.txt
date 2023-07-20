@@ -89,6 +89,7 @@ rundll32 map_rndr.dll,inject
 === Credits ===
 Kenan238  - original getinput.exe
 MousieDev - extensive rewrite, making it a dll, main maintainer
+Yeshi     - intensive testing and bug reporting by usage in his games
 
 
 === License ===

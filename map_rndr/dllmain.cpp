@@ -38,8 +38,6 @@ int load_map(std::vector<char>** vec, char* fname) {
 }
 
 DWORD CALLBACK Process(LPVOID data) {
-	Sleep(250);
-
 	HANDLE hStdOut;
 	DWORD written;
 	DWORD fileSize;
