@@ -19,6 +19,10 @@
 
 extern "C" void RtlGetNtVersionNumbers(DWORD*, DWORD*, DWORD*);
 
+inline int _max(int a, int b) {
+	return ((a > b) ? a : b);
+}
+
 // i was way too lazy to check for values individually, so this was created
 // this technically disallows key code 0xFF in some cases but once that becomes a problem
 // i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
@@ -170,6 +174,7 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 }
 
 std::atomic_bool inFocus = true;
+volatile int sleep_time = 1000;
 
 DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	// i don't like this. at all.
@@ -178,11 +183,8 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
 	
 	while (1) {
-		if (inFocus) { // atleast a tiny optimization
-			SetConsoleMode(hStdIn, mode);
-		} else {
-			Sleep(40);
-		}
+		SetConsoleMode(hStdIn, mode);
+		YieldProcessor();
 	}
 
 	return 0;
@@ -198,8 +200,8 @@ void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 	case MOUSE_MOVED: {
 		mouseX = record.dwMousePosition.X + 1;
 		mouseY = record.dwMousePosition.Y + 1;
-		if (lmx && mouseX > lmx) mouseX = 0;
-		if (lmy && mouseY > lmy) mouseY = 0;
+		if (lmx && mouseX > lmx) mouseX = lmx;
+		if (lmy && mouseY > lmy) mouseY = lmy;
 
 		ENV("mousexpos", itoa_(mouseX));
 		ENV("mouseypos", itoa_(mouseY));
@@ -217,31 +219,35 @@ void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	// i don't like this, but if it means completely working mouse, i'll do it
 
-	INPUT_RECORD ir_buffer[256];
-	DWORD read, i;
+	INPUT_RECORD ir;
+	DWORD read;
 
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
+	unsigned __int64 begin, took;
+
 	while (1) {
-		ReadConsoleInput(hStdIn, ir_buffer, 256, &read);
+		begin = GetTickCount64();
+		ReadConsoleInput(hStdIn, &ir, 1, &read);
 
-		for (i = 0; i < read; i++) {
-			switch (ir_buffer[i].EventType) {
-			case MOUSE_EVENT:
-				MouseEventProc(ir_buffer[i].Event.MouseEvent);
-				break;
+		switch (ir.EventType) {
+		case MOUSE_EVENT:
+			MouseEventProc(ir.Event.MouseEvent);
+			break;
 
-			case FOCUS_EVENT:
-				inFocus = ir_buffer[i].Event.FocusEvent.bSetFocus;
-				break;
+		case FOCUS_EVENT:
+			inFocus = ir.Event.FocusEvent.bSetFocus;
+			break;
 
-			case WINDOW_BUFFER_SIZE_EVENT:
-			case MENU_EVENT:
-			case KEY_EVENT: // keys are processed async
-			default:
-				break;
-			}
+		case WINDOW_BUFFER_SIZE_EVENT:
+		case MENU_EVENT:
+		case KEY_EVENT: // keys are processed async
+		default:
+			break;
 		}
+
+		took = GetTickCount64() - begin;
+		Sleep(_max(sleep_time - took, 0));
 	}
 
 	return 0;
@@ -283,10 +289,15 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	WORD prevRasterX = -1;
 	WORD prevRasterY = -1;
 
-	CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
-	CreateThread(NULL, 0, MousePosThread, NULL, 0, NULL);
+	sleep_time = 1000 / getenvnum_ex("getinput_tps", 40);
 
-	const int sleep = 1000 / getenvnum_ex("getinput_tps", 40);
+	HANDLE hModeThread = CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
+	HANDLE hReadThread = CreateThread(NULL, 0, MousePosThread, hIn, 0, NULL);
+
+	SetThreadAffinityMask(hModeThread, 1ull << 1);
+	SetThreadPriority(hModeThread, THREAD_PRIORITY_LOWEST);
+
+	SetThreadAffinityMask(hReadThread, 1ull << 2);
 
 	unsigned __int64 begin, took;
 
@@ -314,14 +325,12 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 			prevRasterY = rastery;
 		}
 
-		if (inFocus) {
-			ENV("click", itoa_(mouseclick));
-			process_keys();
-			PROCESS_CONTROLLER(deadzone);
-		}
+		if(inFocus) ENV("click", itoa_(mouseclick));
+		process_keys();
+		PROCESS_CONTROLLER(deadzone);
 
 		took = GetTickCount64() - begin;
-		Sleep(max(0, sleep - took));
+		Sleep(_max(0, sleep_time - took));
 	}
 }
 
