@@ -18,8 +18,7 @@ NOMANGLE __declspec(dllexport) BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwRe
 \
 	if (dwReason == DLL_PROCESS_ATTACH) {\
 		DisableThreadLibraryCalls(hInst);\
-		HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadProcName, NULL, 0, NULL);\
-		/*SetThreadPriority(hThread, THREAD_PRIORITY_LOWEST);*/\
+		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadProcName, NULL, 0, NULL);\
 	}\
 	return TRUE;\
 }
@@ -65,7 +64,6 @@ NOMANGLE __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, 
 
 	LPTHREAD_START_ROUTINE startAddr = (LPTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
 	HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, startAddr, lpBaseAddress, 0, NULL);
-	//SetThreadPriority(hThread, THREAD_PRIORITY_LOWEST);
 	WaitForSingleObject(hThread, INFINITE);
 	CloseHandle(hThread);
 	CloseHandle(hProcess);

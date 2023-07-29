@@ -226,10 +226,7 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
-	//unsigned __int64 begin, took;
-
 	while (1) {
-		//begin = GetTickCount64();
 		ReadConsoleInput(hStdIn, &ir, 1, &read);
 
 		switch (ir.EventType) {
@@ -248,8 +245,6 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 			break;
 		}
 
-		//took = GetTickCount64() - begin;
-		//Sleep(_max(sleep_time - took, 0));
 		YieldProcessor();
 	}
 
@@ -298,11 +293,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 	HANDLE hModeThread = CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
 	HANDLE hReadThread = CreateThread(NULL, 0, MousePosThread, hIn, 0, NULL);
-
-	//SetThreadAffinityMask(hReadThread, 1ull << 1);
-	//SetThreadAffinityMask(hModeThread, 1ull << 2);
-	//SetThreadPriority(hModeThread, THREAD_PRIORITY_LOWEST);
-	//SetThreadPriority(hReadThread, THREAD_PRIORITY_LOWEST);
 
 	unsigned __int64 begin, took;
 
