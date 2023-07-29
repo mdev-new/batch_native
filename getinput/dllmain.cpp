@@ -8,6 +8,8 @@
 #include <stdlib.h>
 
 #include <atomic>
+#include <thread>
+#include <timeapi.h>
 
 #include "Injector.h"
 #include "Utilities.h"
@@ -180,11 +182,11 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	// i don't like this. at all.
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
-	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
+	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_VIRTUAL_TERMINAL_PROCESSING) & ~(ENABLE_QUICK_EDIT_MODE);
 	
 	while (1) {
 		SetConsoleMode(hStdIn, mode);
-		YieldProcessor();
+		usleep(500);
 	}
 
 	return 0;
@@ -224,10 +226,10 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
-	unsigned __int64 begin, took;
+	//unsigned __int64 begin, took;
 
 	while (1) {
-		begin = GetTickCount64();
+		//begin = GetTickCount64();
 		ReadConsoleInput(hStdIn, &ir, 1, &read);
 
 		switch (ir.EventType) {
@@ -246,8 +248,9 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 			break;
 		}
 
-		took = GetTickCount64() - begin;
-		Sleep(_max(sleep_time - took, 0));
+		//took = GetTickCount64() - begin;
+		//Sleep(_max(sleep_time - took, 0));
+		YieldProcessor();
 	}
 
 	return 0;
@@ -289,15 +292,17 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	WORD prevRasterX = -1;
 	WORD prevRasterY = -1;
 
+	timeBeginPeriod(1);
+
 	sleep_time = 1000 / getenvnum_ex("getinput_tps", 40);
 
 	HANDLE hModeThread = CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
 	HANDLE hReadThread = CreateThread(NULL, 0, MousePosThread, hIn, 0, NULL);
 
-	SetThreadAffinityMask(hModeThread, 1ull << 1);
-	SetThreadPriority(hModeThread, THREAD_PRIORITY_LOWEST);
-
-	SetThreadAffinityMask(hReadThread, 1ull << 2);
+	//SetThreadAffinityMask(hReadThread, 1ull << 1);
+	//SetThreadAffinityMask(hModeThread, 1ull << 2);
+	//SetThreadPriority(hModeThread, THREAD_PRIORITY_LOWEST);
+	//SetThreadPriority(hReadThread, THREAD_PRIORITY_LOWEST);
 
 	unsigned __int64 begin, took;
 
