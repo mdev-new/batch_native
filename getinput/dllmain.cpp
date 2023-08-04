@@ -2,8 +2,6 @@
 #define STRICT
 #include <windows.h>
 
-#include <xinput.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -15,6 +13,12 @@
 #include "Utilities.h"
 
 #define GETINPUT_SUB __declspec(noinline)
+
+#define ENABLE_CONTROLLER
+#ifdef ENABLE_CONTROLLER
+#pragma comment(lib, "XInput9_1_0.lib")
+#include <xinput.h>
+#endif
 
 // i am too lazy lmfao
 #define ENV SetEnvironmentVariable
@@ -94,6 +98,8 @@ VOID GETINPUT_SUB process_keys() {
 
 	SetEnvironmentVariable("keyspressed", buffer);
 }
+
+#ifdef ENABLE_CONTROLLER
 
 typedef struct _controller_value {
 	WORD bitmask;
@@ -175,6 +181,8 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 	}
 }
 
+#endif
+
 std::atomic_bool inFocus = true;
 volatile int sleep_time = 1000;
 
@@ -244,8 +252,6 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 		default:
 			break;
 		}
-
-		YieldProcessor();
 	}
 
 	return 0;
@@ -322,7 +328,11 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 		if(inFocus) ENV("click", itoa_(mouseclick));
 		process_keys();
+
+#ifdef ENABLE_CONTROLLER
 		PROCESS_CONTROLLER(deadzone);
+#endif
+
 
 		took = GetTickCount64() - begin;
 		Sleep(_max(0, sleep_time - took));

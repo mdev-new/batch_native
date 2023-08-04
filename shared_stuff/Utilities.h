@@ -40,23 +40,15 @@ char* readenv(const char* name) {
 	return _strdup(buffer); // memory leaks go brr
 }
 
-HANDLE timer = NULL;
-LARGE_INTEGER ft;
 void usleep(__int64 usec) {
+	static HANDLE timer = NULL;
+	static LARGE_INTEGER ft;
+
 	ft.QuadPart = -(10 * usec); // Convert to 100 nanosecond interval, negative value indicates relative time
 
 	if (timer == NULL) [[unlikely]] { timer = CreateWaitableTimer(NULL, TRUE, NULL); }
 	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
 	WaitForSingleObject(timer, INFINITE);
-}
-
-void nsleep(__int64 nsec) {
-	ft.QuadPart = -nsec; // Convert to 100 nanosecond interval, negative value indicates relative time
-
-	if (timer == NULL) [[unlikely]] { timer = CreateWaitableTimer(NULL, TRUE, NULL); }
-	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
-	WaitForSingleObject(timer, INFINITE);
-	return;
 }
 
 #ifdef __cplusplus

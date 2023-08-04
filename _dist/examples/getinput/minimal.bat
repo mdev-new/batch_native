@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-mode 88,55
+mode 125,55
 
 SET BATCHNATIVE_BIN_HOME=..\..
 set /a rasterx=rastery=8

@@ -31,8 +31,8 @@ Last update: 25th of June, 2023
 (o)   keyspressed: is formatted like this: -keycode1-keycode2-keycode3- ; uses virtual key codes, not characters, keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes; that means keyboard layouts do not matter, the physical location of keys is considered
 (o)   controller#: xbox controller with index # state ; # = number between 1 and 4
 (i)   noresize: 1 to disable resizing
-(i)   rasterx, rastery: turn on the raster font and set its size to x and y
-(i)   limitMouseX, limitMouseY: limit the x and y range of mouse, unsets mousexpos or mouseypos if out of range
+(i)   rasterx, rastery: turn on the raster font and set its size to x and y ; can be changed after injection
+(i)   limitMouseX, limitMouseY: limit the x and y range of mouse, unsets mousexpos or mouseypos if out of range ; can be changed after injection
 (i)   ctrl_deadzone: deadzone for the controllers' thumbsticks in %'s
 (i)   getinput_tps: how many times should the main loop run per second
 
