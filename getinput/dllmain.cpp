@@ -216,6 +216,8 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 }
 
 void MouseEventProc(MOUSE_EVENT_RECORD& record) {
+	if (!inFocus) return;
+
 	int lmx = getenvnum("limitMouseX");
 	int lmy = getenvnum("limitMouseY");
 
@@ -349,13 +351,14 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 #endif
 
-		if(inFocus) ENV("click", itoa_(mouseclick));
-		process_keys();
+		if (inFocus) {
+			ENV("click", itoa_(mouseclick));
+			process_keys();
 
 #ifdef ENABLE_CONTROLLER
-		PROCESS_CONTROLLER(deadzone);
+			PROCESS_CONTROLLER(deadzone);
 #endif
-
+		}
 
 		took = GetTickCount64() - begin;
 		Sleep(_max(0, sleep_time - took));
