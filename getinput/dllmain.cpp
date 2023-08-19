@@ -14,7 +14,12 @@
 
 #define GETINPUT_SUB __declspec(noinline)
 
-#define ENABLE_CONTROLLER
+//#define WIN2K_BUILD
+
+#ifndef WIN2K_BUILD
+#	define ENABLE_CONTROLLER
+#endif
+
 #ifdef ENABLE_CONTROLLER
 #pragma comment(lib, "XInput9_1_0.lib")
 #include <xinput.h>
@@ -190,11 +195,21 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	// i don't like this. at all.
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
+#ifndef WIN2K_BUILD
 	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_VIRTUAL_TERMINAL_PROCESSING) & ~(ENABLE_QUICK_EDIT_MODE);
-	
+#else
+	DWORD mode = (ENABLE_MOUSE_INPUT | 0x0080);
+#endif
+
+
 	while (1) {
 		SetConsoleMode(hStdIn, mode);
+
+#ifndef WIN2K_BUILD
 		usleep(500);
+#else
+		Sleep(1);
+#endif
 	}
 
 	return 0;
@@ -269,6 +284,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 	BYTE mouseclick;
 
+#ifndef WIN2K_BUILD
+
 	short rasterx, rastery;
 	bool isRaster;
 
@@ -293,6 +310,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	WORD prevRasterX = -1;
 	WORD prevRasterY = -1;
 
+#endif
+
 	timeBeginPeriod(1);
 
 	sleep_time = 1000 / getenvnum_ex("getinput_tps", 40);
@@ -314,6 +333,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 			mouseclick |= mouseclick & 0b11;
 		}
 
+#ifndef WIN2K_BUILD
+
 		rasterx = getenvnum("rasterx");
 		rastery = getenvnum("rastery");
 		isRaster = rasterx && rastery;
@@ -325,6 +346,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 			prevRasterX = rasterx;
 			prevRasterY = rastery;
 		}
+
+#endif
 
 		if(inFocus) ENV("click", itoa_(mouseclick));
 		process_keys();

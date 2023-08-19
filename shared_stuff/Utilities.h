@@ -40,6 +40,8 @@ char* readenv(const char* name) {
 	return _strdup(buffer); // memory leaks go brr
 }
 
+#ifndef WIN2K_BUILD
+
 void usleep(__int64 usec) {
 	static HANDLE timer = NULL;
 	static LARGE_INTEGER ft;
@@ -50,6 +52,8 @@ void usleep(__int64 usec) {
 	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
 	WaitForSingleObject(timer, INFINITE);
 }
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -49,6 +49,7 @@ cleanup:
 	return ppid;
 }
 
+
 NOMANGLE __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow) {
 	HMODULE hSelf = NULL;
 	char filename[MAX_PATH];
