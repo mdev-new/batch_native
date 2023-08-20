@@ -188,7 +188,7 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 
 #endif
 
-std::atomic_bool inFocus = true;
+bool inFocus = true;
 volatile int sleep_time = 1000;
 
 DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
@@ -200,7 +200,6 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 #else
 	DWORD mode = (ENABLE_MOUSE_INPUT | 0x0080);
 #endif
-
 
 	while (1) {
 		SetConsoleMode(hStdIn, mode);
@@ -218,17 +217,14 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 	if (!inFocus) return;
 
-	int lmx = getenvnum("limitMouseX");
-	int lmy = getenvnum("limitMouseY");
-
-	int mouseX, mouseY;
-
 	switch (record.dwEventFlags) {
 	case MOUSE_MOVED: {
-		mouseX = record.dwMousePosition.X + 1;
-		mouseY = record.dwMousePosition.Y + 1;
-		if (lmx && mouseX > lmx) mouseX = lmx;
-		if (lmy && mouseY > lmy) mouseY = lmy;
+		int lmx = 0, lmy = 0;
+
+		int mouseX = record.dwMousePosition.X + 1;
+		int mouseY = record.dwMousePosition.Y + 1;
+		if (lmx && mouseX > (lmx =getenvnum("limitMouseX"))) mouseX = lmx;
+		if (lmy && mouseY > (lmy = getenvnum("limitMouseY"))) mouseY = lmy;
 
 		ENV("mousexpos", itoa_(mouseX));
 		ENV("mouseypos", itoa_(mouseY));
@@ -243,32 +239,32 @@ void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 	}
 }
 
+void processEvnt(INPUT_RECORD ir) {
+	switch (ir.EventType) {
+	case MOUSE_EVENT:
+		MouseEventProc(ir.Event.MouseEvent);
+		break;
+
+	case FOCUS_EVENT: // handled in main loop, this is quite buggy
+	case WINDOW_BUFFER_SIZE_EVENT:
+	case MENU_EVENT:
+	case KEY_EVENT: // keys are processed async
+	default:
+		break;
+	}
+}
+
 DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	// i don't like this, but if it means completely working mouse, i'll do it
 
-	INPUT_RECORD ir;
+	INPUT_RECORD ir[64];
 	DWORD read;
 
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
 	while (1) {
-		ReadConsoleInput(hStdIn, &ir, 1, &read);
-
-		switch (ir.EventType) {
-		case MOUSE_EVENT:
-			MouseEventProc(ir.Event.MouseEvent);
-			break;
-
-		case FOCUS_EVENT:
-			inFocus = ir.Event.FocusEvent.bSetFocus;
-			break;
-
-		case WINDOW_BUFFER_SIZE_EVENT:
-		case MENU_EVENT:
-		case KEY_EVENT: // keys are processed async
-		default:
-			break;
-		}
+		ReadConsoleInput(hStdIn, ir, 64, &read);
+		for(int i = 0; i < read; i++) processEvnt(ir[i]);
 	}
 
 	return 0;
@@ -319,7 +315,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	sleep_time = 1000 / getenvnum_ex("getinput_tps", 40);
 
 	HANDLE hModeThread = CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
-	HANDLE hReadThread = CreateThread(NULL, 0, MousePosThread, hIn, 0, NULL);
+	HANDLE hReadThread = CreateThread(NULL, 0, MousePosThread, NULL, 0, NULL);
 
 	unsigned __int64 begin, took;
 
@@ -350,6 +346,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 		}
 
 #endif
+
+		inFocus = GetForegroundWindow() == hCon;
 
 		if (inFocus) {
 			ENV("click", itoa_(mouseclick));

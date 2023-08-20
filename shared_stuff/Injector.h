@@ -10,8 +10,12 @@
 #define NOMANGLE
 #endif
 
+volatile HMODULE hDll = NULL;
+
 #define BasicDllMainImpl(ThreadProcName) \
 NOMANGLE __declspec(dllexport) BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {\
+	hDll = hInst;\
+\
 	char name[MAX_PATH];\
 	GetModuleFileName(NULL, name, sizeof name);\
 	if(lstrcmp("rundll32.exe", name + lstrlen(name) - 12) == 0) return TRUE;\
@@ -51,10 +55,12 @@ cleanup:
 
 
 NOMANGLE __declspec(dllexport) void CALLBACK inject(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow) {
-	HMODULE hSelf = NULL;
 	char filename[MAX_PATH];
-	GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&getppid, &hSelf);
-	GetModuleFileName(hSelf, filename, MAX_PATH);
+
+	// :troll:
+	while (hDll == NULL);
+	Sleep(5);
+	if (!GetModuleFileName(hDll, filename, MAX_PATH)) return;
 
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, getppid());
 
