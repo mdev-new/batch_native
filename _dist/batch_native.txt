@@ -98,5 +98,8 @@ Copyright (C) 2021-2023 batch_native authors.  All rights reserved.
 Do whatever with it as long as your forks are public. Making an pull request
 to the original repo would be very much appreciated.
 
+The software is provided "as is", without warranty of any kind.
+In no event shall the authors or copyright holders be liable for any claim, damages or other liability.
+
 We do reserve the right to alter this document at any time without any prior
 notice. You may not alter this statement.
