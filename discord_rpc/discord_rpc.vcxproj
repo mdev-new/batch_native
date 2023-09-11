@@ -102,7 +102,7 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -125,7 +125,7 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -155,7 +155,7 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -185,7 +185,7 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

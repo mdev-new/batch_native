@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.33529.622
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getinput", "getinput\getinput.vcxproj", "{36A7B943-AB3D-495D-8E71-5CFFC186A8C1}"
 EndProject
@@ -18,6 +18,13 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mdev", "mdev", "{5A8CA87A-8553-472B-AF6B-D7AB1A6928D4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "custom", "custom", "{4BECA6A3-8094-48AD-8A55-A8D889BBAAB7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "audioplayer", "audioplayer\Project.vcxproj", "{36465235-492F-465C-9554-6113F3B1E850}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Položky řešení", "Položky řešení", "{E4689ECE-9AEB-4001-82A0-1596194F39AE}"
+	ProjectSection(SolutionItems) = preProject
+		_dist\batch_native.txt = _dist\batch_native.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,6 +69,18 @@ Global
 		{F96078A9-022F-48D0-AC45-955814EF5B45}.Release|x64.Build.0 = Release|x64
 		{F96078A9-022F-48D0-AC45-955814EF5B45}.Release|x86.ActiveCfg = Release|x64
 		{F96078A9-022F-48D0-AC45-955814EF5B45}.Release|x86.Build.0 = Release|x64
+		{36465235-492F-465C-9554-6113F3B1E850}.Debug|Win32.ActiveCfg = Debug|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Debug|Win32.Build.0 = Debug|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Debug|x64.ActiveCfg = Debug|x64
+		{36465235-492F-465C-9554-6113F3B1E850}.Debug|x64.Build.0 = Debug|x64
+		{36465235-492F-465C-9554-6113F3B1E850}.Debug|x86.ActiveCfg = Debug|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Debug|x86.Build.0 = Debug|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Release|Win32.ActiveCfg = Release|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Release|Win32.Build.0 = Release|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Release|x64.ActiveCfg = Release|x64
+		{36465235-492F-465C-9554-6113F3B1E850}.Release|x64.Build.0 = Release|x64
+		{36465235-492F-465C-9554-6113F3B1E850}.Release|x86.ActiveCfg = Release|Win32
+		{36465235-492F-465C-9554-6113F3B1E850}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,6 +89,7 @@ Global
 		{36A7B943-AB3D-495D-8E71-5CFFC186A8C1} = {5A8CA87A-8553-472B-AF6B-D7AB1A6928D4}
 		{AA30EA7E-B048-4BB7-9CC6-D150B3CDB001} = {5A8CA87A-8553-472B-AF6B-D7AB1A6928D4}
 		{F96078A9-022F-48D0-AC45-955814EF5B45} = {5A8CA87A-8553-472B-AF6B-D7AB1A6928D4}
+		{36465235-492F-465C-9554-6113F3B1E850} = {5A8CA87A-8553-472B-AF6B-D7AB1A6928D4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {98ADFCE5-1F69-429D-8A7A-95E410245EEE}

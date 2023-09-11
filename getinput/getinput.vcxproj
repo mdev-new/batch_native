@@ -103,7 +103,7 @@
       <AdditionalDependencies>ntdll.lib;xinput9_1_0.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -127,7 +127,7 @@
       <AdditionalDependencies>ntdll.lib;xinput9_1_0.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -160,7 +160,7 @@
       <AdditionalDependencies>ntdll.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -193,7 +193,7 @@
       <AdditionalDependencies>ntdll.lib;Xinput9_1_0.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>$(SolutionDir)z_makedist.bat $(TargetDir)</Command>
+      <Command>cmd /c "$(SolutionDir)z_makedist.bat" $(TargetDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
