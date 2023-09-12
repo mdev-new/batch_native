@@ -15,9 +15,6 @@ DWORD CALLBACK RunAudioQueue(LPVOID data) {
     std::string buffer;
     buffer.reserve(MAXLEN);
 
-    std::string buffer1;
-    buffer1.reserve(MAXLEN);
-
     hPipe = CreateNamedPipe((LPCSTR)data,
         PIPE_ACCESS_INBOUND,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,

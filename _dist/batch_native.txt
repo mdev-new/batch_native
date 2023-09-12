@@ -18,9 +18,13 @@ Last update: 25th of June, 2023
 
 === Features ===
 - Fast & small
-- Self injecting (no third-party exes required)
-- Featuring mouse, keyboard and Xbox controller polling, Discord RPC and a map renderer
 - Easy to setup in both new and existing projects
+- Self injecting (no third-party exes required)
+- Featuring:
+  - mouse, keyboard and Xbox controller polling
+  - Discord RPC
+  - map renderer
+  - audio player
 
 
 === New environment variables ===
@@ -56,6 +60,10 @@ All input variables are *optional*
 (i)   viewYoff - Y offset of the camera
 (i)   mapFile - name of the file containing the current map
 
+-- Audio player --
+No environmental variables in use, only the pipes "\\.\pipe\BatAudQ0" .. "\\.\pipe\BatAudQ0"
+
+
 i=in,o=out
 
 
@@ -85,6 +93,11 @@ set /a viewXoff=0
 set mapFile=map.txt
 rundll32 map_rndr.dll,inject
 
+-- Audio player --
+
+<nul set/p"=INSERT_FILENAME_HERE.mp3" > \\.\pipe\BatAudQx
+where the 'x' can be a number between 0 and 3
+
 
 === Credits ===
 Kenan238  - original getinput.exe
@@ -95,11 +108,12 @@ Yeshi     - intensive testing and bug reporting by usage in his games
 === License ===
 Copyright (C) 2021-2023 batch_native authors.  All rights reserved.
 
-Do whatever with it as long as your forks are public. Making an pull request
-to the original repo would be very much appreciated.
+Do whatever with it, as long as your forks are kept public.
+Making pull request to the original repository (https://github.com/mdev-new/batch_native) would be very much appreciated.
 
 The software is provided "as is", without warranty of any kind.
 In no event shall the authors or copyright holders be liable for any claim, damages or other liability.
 
 We do reserve the right to alter this document at any time without any prior
-notice. You may not alter this statement.
+notice.
+Thou may not alter this license.
