@@ -34,6 +34,7 @@ Last update: 25th of June, 2023
 (o)   wheeldelta: up=-1,down=1 ; reset this manually once you process
 (o)   keyspressed: is formatted like this: -keycode1-keycode2-keycode3- ; uses virtual key codes, not characters, keycode reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes; that means keyboard layouts do not matter, the physical location of keys is considered
 (o)   controller#: xbox controller with index # state ; # = number between 1 and 4
+(o)   getinputInitialized: contains 1 if injection was successful
 (i)   noresize: 1 to disable resizing
 (i)   rasterx, rastery: turn on the raster font and set its size to x and y ; can be changed after injection
 (i)   limitMouseX, limitMouseY: limit the x and y range of mouse, unsets mousexpos or mouseypos if out of range ; can be changed after injection
@@ -41,7 +42,6 @@ Last update: 25th of June, 2023
 (i)   getinput_tps: how many times should the main loop run per second
 
 All input variables are *optional*
-
 
 -- Discord RPC --
 (i)   discordappid - your own app id (created on the discord developer portal)
@@ -53,6 +53,8 @@ All input variables are *optional*
 (i)   discordsmallimg - name of the asset that gets used as the small image
 (i)   discordsmallimgtxt - text when user mouses over the small image
 
+Input variables are NOT optional.
+
 -- Map Renderer --
 (i)   levelWidth - width of the level
 (i)   levelHeight - height of the level
@@ -60,8 +62,10 @@ All input variables are *optional*
 (i)   viewYoff - Y offset of the camera
 (i)   mapFile - name of the file containing the current map
 
+Input variables are NOT optional.
+
 -- Audio player --
-No environmental variables in use, only the pipes "\\.\pipe\BatAudQ0" .. "\\.\pipe\BatAudQ0"
+No environmental variables in use, only the pipes "\\.\pipe\BatAudQ0" .. "\\.\pipe\BatAudQ3"
 
 
 i=in,o=out

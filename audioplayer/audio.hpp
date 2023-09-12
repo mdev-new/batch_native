@@ -24,6 +24,7 @@ namespace Audio
 		bool IsPlaying() const;
 		void Stop();
 		void SetEndCallback(std::function<void()> callback);
+		~Audio();
 
 	private:
 		void Rewind();
@@ -45,7 +46,11 @@ namespace Audio
 	class AudioFile final : public Audio
 	{
 	public:
-		explicit AudioFile(std::string filename);
+		AudioFile(std::string filename);
+		AudioFile();
+		void SetFile(std::string &file);
+	private:
+		ma_decoder_config cfg;
 	};
 
 

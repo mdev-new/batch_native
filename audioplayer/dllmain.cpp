@@ -15,11 +15,13 @@ DWORD CALLBACK RunAudioQueue(LPVOID data) {
     std::string buffer;
     buffer.reserve(MAXLEN);
 
+    auto audio = Audio::AudioFile();
+
     hPipe = CreateNamedPipe((LPCSTR)data,
         PIPE_ACCESS_INBOUND,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,
         1,
-        MAXLEN,
+        0,
         MAXLEN,
         NMPWAIT_USE_DEFAULT_WAIT,
         NULL);
@@ -30,8 +32,8 @@ DWORD CALLBACK RunAudioQueue(LPVOID data) {
                 /* add terminating zero */
                 buffer[dwRead] = '\0';
 
-                auto aud = Audio::AudioFile{ buffer };
-                snd.Play(aud);
+                audio.SetFile(buffer);
+                snd.Play(audio);
             }
         }
 

@@ -6,6 +6,10 @@ namespace Audio
 		:decoder{}
 	{}
 
+	Audio::~Audio() {
+		ma_decoder_uninit(&this->decoder);
+	}
+
 	void Audio::Wait() const
 	{
 		if (!silence)
@@ -69,6 +73,14 @@ namespace Audio
 	{
 		ma_decoder_config cfg = ma_decoder_config_init(ma_format_f32, 2, 44100); // TODO read from device
 		ma_decoder_init_file(filename.c_str(), &cfg, &decoder);
+	}
+
+	AudioFile::AudioFile() {
+		this->cfg = ma_decoder_config_init(ma_format_f32, 2, 44100); // TODO read from device
+	}
+
+	void AudioFile::SetFile(std::string& str) {
+		ma_decoder_init_file(str.c_str(), &this->cfg, &decoder);
 	}
 
 	AudioMemView::AudioMemView(const void* data, std::size_t size)

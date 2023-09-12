@@ -21,8 +21,8 @@
 #endif
 
 #ifdef ENABLE_CONTROLLER
-#pragma comment(lib, "XInput9_1_0.lib")
-#include <xinput.h>
+#	pragma comment(lib, "XInput9_1_0.lib")
+#	include <xinput.h>
 #endif
 
 // i am too lazy lmfao
@@ -264,10 +264,32 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 
 	while (1) {
 		ReadConsoleInput(hStdIn, ir, 64, &read);
-		for(int i = 0; i < read; i++) processEvnt(ir[i]);
+		for (int i = 0; i < read; i++) {
+			processEvnt(ir[i]);
+		}
 	}
 
 	return 0;
+}
+
+void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
+	int screenx = getenvnum("screenx");
+	int screeny = getenvnum("screeny");
+
+	if (screenx && screeny /* && (screenx != *lastScreenX) && (screeny != *lastScreenY) */) {
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+		COORD consoleBufferSize = { screenx, screeny };
+		SMALL_RECT windowInfo = { 0, 0, screenx - 1, screeny - 1 };
+
+		SetConsoleWindowInfo(hOut, FALSE, &windowInfo);
+		SetConsoleScreenBufferSize(hOut, consoleBufferSize);
+
+		*lastScreenX = screenx;
+		*lastScreenY = screeny;
+	}
+
+	return;
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void*) {
@@ -275,6 +297,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	ENV("mousexpos", "0");
 	ENV("mouseypos", "0");
 	ENV("click", "0");
+	ENV("getinputInitialized", "1");
 
 	const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	const HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -319,6 +342,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 	unsigned __int64 begin, took;
 
+	int lastscreenx = -1, lastscreeny = -1;
+
 	while (TRUE) {
 		begin = GetTickCount64();
 
@@ -357,6 +382,8 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 			PROCESS_CONTROLLER(deadzone);
 #endif
 		}
+
+		resizeConsoleIfNeeded(&lastscreenx, &lastscreeny);
 
 		took = GetTickCount64() - begin;
 		Sleep(_max(0, sleep_time - took));
