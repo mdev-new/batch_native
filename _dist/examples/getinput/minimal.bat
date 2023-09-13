@@ -24,6 +24,9 @@ for /l %%c in (1,1,4) do (
 	)
 )
 
-if "!keyspressed!"=="-32-" set /a rasterx=10,rastery=18
+if "!keyspressed!"=="-32-" (
+	set /a rasterx=10,rastery=18
+	set /a screenx=5,screeny=5
+)
 
 goto :a

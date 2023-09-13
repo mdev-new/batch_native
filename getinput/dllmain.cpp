@@ -195,10 +195,12 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	// i don't like this. at all.
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
+	DWORD mode;
+
 #ifndef WIN2K_BUILD
-	DWORD mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_VIRTUAL_TERMINAL_PROCESSING) & ~(ENABLE_QUICK_EDIT_MODE);
+	mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_VIRTUAL_TERMINAL_PROCESSING) & ~(ENABLE_QUICK_EDIT_MODE);
 #else
-	DWORD mode = (ENABLE_MOUSE_INPUT | 0x0080);
+	mode = (ENABLE_MOUSE_INPUT | 0x0080);
 #endif
 
 	while (1) {
@@ -223,7 +225,7 @@ void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 
 		int mouseX = record.dwMousePosition.X + 1;
 		int mouseY = record.dwMousePosition.Y + 1;
-		if (lmx && mouseX > (lmx =getenvnum("limitMouseX"))) mouseX = lmx;
+		if (lmx && mouseX > (lmx = getenvnum("limitMouseX"))) mouseX = lmx;
 		if (lmy && mouseY > (lmy = getenvnum("limitMouseY"))) mouseY = lmy;
 
 		ENV("mousexpos", itoa_(mouseX));
@@ -272,17 +274,19 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	return 0;
 }
 
+// for some reason this doesn't resize????
+// atleast on windows 11
 void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	int screenx = getenvnum("screenx");
 	int screeny = getenvnum("screeny");
 
-	if (screenx && screeny /* && (screenx != *lastScreenX) && (screeny != *lastScreenY) */) {
+	if (screenx && screeny && (screenx != *lastScreenX) && (screeny != *lastScreenY)) {
 		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 		COORD consoleBufferSize = { screenx, screeny };
 		SMALL_RECT windowInfo = { 0, 0, screenx - 1, screeny - 1 };
 
-		SetConsoleWindowInfo(hOut, FALSE, &windowInfo);
+		SetConsoleWindowInfo(hOut, TRUE /* this has to be TRUE on Windows 11 */, &windowInfo);
 		SetConsoleScreenBufferSize(hOut, consoleBufferSize);
 
 		*lastScreenX = screenx;
@@ -343,6 +347,7 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	unsigned __int64 begin, took;
 
 	int lastscreenx = -1, lastscreeny = -1;
+	resizeConsoleIfNeeded(&lastscreenx, &lastscreeny);
 
 	while (TRUE) {
 		begin = GetTickCount64();
@@ -382,8 +387,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 			PROCESS_CONTROLLER(deadzone);
 #endif
 		}
-
-		resizeConsoleIfNeeded(&lastscreenx, &lastscreeny);
 
 		took = GetTickCount64() - begin;
 		Sleep(_max(0, sleep_time - took));
