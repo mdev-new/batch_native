@@ -34,6 +34,8 @@ inline int _max(int a, int b) {
 	return ((a > b) ? a : b);
 }
 
+std::atomic_bool inTextInput = false;
+
 // i was way too lazy to check for values individually, so this was created
 // this technically disallows key code 0xFF in some cases but once that becomes a problem
 // i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
@@ -128,6 +130,33 @@ controller_value ctrl_values[] = {
 	{ 0x8000, "btn_y" }
 };
 
+const char* ControllerEnvNames[] = {
+	"controller1_ltrig",
+	"controller1_rtrig",
+	"controller1_lthumbx",
+	"controller1_lthumby",
+	"controller1_rthumbx",
+	"controller1_rthumby",
+	"controller2_ltrig",
+	"controller2_rtrig",
+	"controller2_lthumbx",
+	"controller2_lthumby",
+	"controller2_rthumbx",
+	"controller2_rthumby",
+	"controller3_ltrig",
+	"controller3_rtrig",
+	"controller3_lthumbx",
+	"controller3_lthumby",
+	"controller3_rthumbx",
+	"controller3_rthumby",
+	"controller4_ltrig",
+	"controller4_rtrig",
+	"controller4_lthumbx",
+	"controller4_lthumby",
+	"controller4_rthumbx",
+	"controller4_rthumby"
+};
+
 typedef struct _vec2i {
 	int x, y;
 } vec2i;
@@ -160,26 +189,32 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 
 		if (dwResult == ERROR_SUCCESS) { /* controller is connected */
 			ZeroMemory(buffer, sizeof buffer);
-			size = 0;
 
-			int result;
-			for (WORD var = 0; var < 14; var++) {
-				if (result = (state.Gamepad.wButtons & ctrl_values[var].bitmask)) {
-					if (size && result) buffer[size++] = ',';
+			vec2i left_stick = process_stick({ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
+			vec2i right_stick = process_stick({ state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
 
-					size += sprintf(buffer + size, "%s", ctrl_values[var].str);
-				}
-			}
+#ifdef CONTROLLER_NORMAL_INPUT
+			size = sprintf(buffer + size, "ltrig=%d,rtrig=%d,lthumbx=%d,lthumby=%d,rthumbx=%d,rthumby=%d", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, left_stick.x, left_stick.y, right_stick.x, right_stick.y);
 
 			if (state.Gamepad.wButtons) {
 				buffer[size++] = '|';
 			}
 
-			vec2i left_stick = process_stick({ state.Gamepad.sThumbLX, state.Gamepad.sThumbLY }, (int)(deadzone * (float)(0x7FFF)));
-			vec2i right_stick = process_stick({ state.Gamepad.sThumbRX, state.Gamepad.sThumbRY }, (int)(deadzone * (float)(0x7FFF)));
-			size += sprintf(buffer + size, "ltrig=%d,rtrig=%d,lthumbx=%d,lthumby=%d,rthumbx=%d,rthumby=%d", state.Gamepad.bLeftTrigger, state.Gamepad.bRightTrigger, left_stick.x, left_stick.y, right_stick.x, right_stick.y);
+			int origSize = size;
 
-			SetEnvironmentVariable(varName, buffer);
+#else
+// YESHIS INSANE, NOT PRETTY FUCKERY BEGINS HERE
+// I DONT WANT TO DO THIS
+
+		ENV(ControllerEnvNames[i * 6 + 0], itoa_(state.Gamepad.bLeftTrigger));
+		ENV(ControllerEnvNames[i * 6 + 1], itoa_(state.Gamepad.bRightTrigger));
+		ENV(ControllerEnvNames[i * 6 + 2], itoa_(left_stick.x));
+		ENV(ControllerEnvNames[i * 6 + 3], itoa_(left_stick.y));
+		ENV(ControllerEnvNames[i * 6 + 4], itoa_(right_stick.x));
+		ENV(ControllerEnvNames[i * 6 + 5], itoa_(right_stick.y));
+
+#endif
+
 		} else {
 			SetEnvironmentVariable(varName, NULL);
 		}
@@ -191,20 +226,34 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 bool inFocus = true;
 volatile int sleep_time = 1000;
 
-DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
-	// i don't like this. at all.
-	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
-	DWORD mode;
+DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
+	// i don't like this function. at all.
+	// basically we're just chugging cpu because microsoft
+	// decided to make windows utter trash.
+
+	HANDLE hStdIn =  GetStdHandle(STD_INPUT_HANDLE);
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	DWORD modeIn, modeOut;
 
 #ifndef WIN2K_BUILD
-	mode = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_VIRTUAL_TERMINAL_PROCESSING) & ~(ENABLE_QUICK_EDIT_MODE);
+	modeIn = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
+	modeOut = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
 #else
-	mode = (ENABLE_MOUSE_INPUT | 0x0080);
+#	ifndef ENABLE_EXTENDED_FLAGS
+#		define ENABLE_EXTENDED_FLAGS 0x0080
+#	endif
+
+	modeIn = (ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
+	modeOut = 0;
 #endif
 
+	DWORD textInputMode = ENABLE_LINE_INPUT | ENABLE_MOUSE_INPUT;
+
 	while (1) {
-		SetConsoleMode(hStdIn, mode);
+		SetConsoleMode(hStdIn, inTextInput ? textInputMode : modeIn);
+		SetConsoleMode(hStdOut, modeOut);
 
 #ifndef WIN2K_BUILD
 		usleep(500);
@@ -265,6 +314,11 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
 	while (1) {
+		if (inTextInput) {
+			Sleep(1);
+			continue;
+		}
+
 		ReadConsoleInput(hStdIn, ir, 64, &read);
 		for (int i = 0; i < read; i++) {
 			processEvnt(ir[i]);
@@ -274,8 +328,7 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	return 0;
 }
 
-// for some reason this doesn't resize????
-// atleast on windows 11
+// maybe doesn't work on subsequent calls
 void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	int screenx = getenvnum("screenx");
 	int screeny = getenvnum("screeny");
@@ -294,6 +347,47 @@ void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	}
 
 	return;
+}
+
+#define MAXLEN 512
+DWORD GETINPUT_SUB CALLBACK CommandThread(void* data) {
+	HANDLE hPipe;
+	DWORD dwRead;
+
+	char buffer[MAXLEN] = { 0 };
+	char command_string[128] = { 0 };
+
+	hPipe = CreateNamedPipe("\\\\.\\pipe\\GetinputCmd",
+		PIPE_ACCESS_INBOUND,
+		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,
+		1,
+		0,
+		MAXLEN,
+		NMPWAIT_USE_DEFAULT_WAIT,
+		NULL);
+
+	while (hPipe != INVALID_HANDLE_VALUE) {
+		if (ConnectNamedPipe(hPipe, NULL) != FALSE) {   // wait for someone to connect to the pipe
+			while (ReadFile(hPipe, buffer, MAXLEN - 1, &dwRead, NULL) != FALSE) {
+				/* add terminating zero */
+				buffer[dwRead] = '\0';
+
+				sscanf(command_string, "%s ", buffer);
+				if (strcmp(command_string, "begin_text_input") == 0) {
+					inTextInput = true;
+					fflush(stdin);
+					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+				}
+				else if (strcmp(command_string, "end_text_input") == 0) {
+					inTextInput = false;
+					fflush(stdin);
+					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+				}
+			}
+		}
+
+		DisconnectNamedPipe(hPipe);
+	}
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void*) {
@@ -341,8 +435,9 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 	sleep_time = 1000 / getenvnum_ex("getinput_tps", 40);
 
-	HANDLE hModeThread = CreateThread(NULL, 0, ModeThread, NULL, 0, NULL);
-	HANDLE hReadThread = CreateThread(NULL, 0, MousePosThread, NULL, 0, NULL);
+	HANDLE hModeThread    = CreateThread(NULL, 0, ModeThread    , NULL, 0, NULL);
+	HANDLE hReadThread    = CreateThread(NULL, 0, MousePosThread, NULL, 0, NULL);
+	HANDLE hCommandThread = CreateThread(NULL, 0, CommandThread , NULL, 0, NULL);
 
 	unsigned __int64 begin, took;
 
@@ -381,7 +476,10 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 		if (inFocus) {
 			ENV("click", itoa_(mouseclick));
-			process_keys();
+
+			if (!inTextInput) {
+				process_keys();
+			}
 
 #ifdef ENABLE_CONTROLLER
 			PROCESS_CONTROLLER(deadzone);

@@ -4,9 +4,10 @@
 
 This is the documentation for the official Batch native modules.
 For documentation on community-made modules, contact their respective authors.
+For documentation on developing custom modules, refer to developer_docs.txt.
 
 Written by MousieDev & Kenan238
-Last update: 25th of June, 2023
+Last update: 13th of September, 2023
 
 === Table of contents ===
 => Features
@@ -112,12 +113,14 @@ Yeshi     - intensive testing and bug reporting by usage in his games
 === License ===
 Copyright (C) 2021-2023 batch_native authors.  All rights reserved.
 
-Do whatever with it, as long as your forks are kept public.
-Making pull request to the original repository (https://github.com/mdev-new/batch_native) would be very much appreciated.
+By using the files distributed to you, you agree with this license.
+
+Do whatever with it, as long as your forks (and changes) are kept public.
+Making an pull request to the original repository (https://github.com/mdev-new/batch_native) would be very much appreciated.
 
 The software is provided "as is", without warranty of any kind.
 In no event shall the authors or copyright holders be liable for any claim, damages or other liability.
 
-We do reserve the right to alter this document at any time without any prior
+We do reserve the right to alter this license at any time, without any prior
 notice.
 Thou may not alter this license.
