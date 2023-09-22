@@ -238,7 +238,7 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	DWORD modeIn, modeOut;
 
 #ifndef WIN2K_BUILD
-	modeIn = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
+	modeIn = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE | ENABLE_LINE_INPUT);
 	modeOut = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
 #else
 #	ifndef ENABLE_EXTENDED_FLAGS
@@ -249,7 +249,7 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	modeOut = 0;
 #endif
 
-	DWORD textInputMode = ENABLE_LINE_INPUT | ENABLE_MOUSE_INPUT;
+	DWORD textInputMode = modeIn | ENABLE_LINE_INPUT;
 
 	while (1) {
 		SetConsoleMode(hStdIn, inTextInput ? textInputMode : modeIn);
@@ -292,14 +292,22 @@ void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 
 void processEvnt(INPUT_RECORD ir) {
 	switch (ir.EventType) {
-	case MOUSE_EVENT:
+	case MOUSE_EVENT: {
 		MouseEventProc(ir.Event.MouseEvent);
 		break;
+	}
+
+	case KEY_EVENT: { // keys are processed async
+		if (inTextInput) {
+			DWORD w;
+			WriteConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &ir, 1, &w);
+		}
+		break;
+	}
 
 	case FOCUS_EVENT: // handled in main loop, this is quite buggy
 	case WINDOW_BUFFER_SIZE_EVENT:
 	case MENU_EVENT:
-	case KEY_EVENT: // keys are processed async
 	default:
 		break;
 	}
@@ -309,17 +317,13 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	// i don't like this, but if it means completely working mouse, i'll do it
 
 	INPUT_RECORD ir[64];
-	DWORD read;
+	DWORD read, written;
 
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
 	while (1) {
-		if (inTextInput) {
-			Sleep(1);
-			continue;
-		}
-
 		ReadConsoleInput(hStdIn, ir, 64, &read);
+
 		for (int i = 0; i < read; i++) {
 			processEvnt(ir[i]);
 		}
@@ -349,6 +353,7 @@ void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	return;
 }
 
+// TODO DEBUG
 #define MAXLEN 512
 DWORD GETINPUT_SUB CALLBACK CommandThread(void* data) {
 	HANDLE hPipe;
@@ -357,9 +362,9 @@ DWORD GETINPUT_SUB CALLBACK CommandThread(void* data) {
 	char buffer[MAXLEN] = { 0 };
 	char command_string[128] = { 0 };
 
-	hPipe = CreateNamedPipe("\\\\.\\pipe\\GetinputCmd",
+	hPipe = CreateNamedPipe(TEXT("\\\\.\\pipe\\GetinputCmd"),
 		PIPE_ACCESS_INBOUND,
-		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,
+		PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,
 		1,
 		0,
 		MAXLEN,
@@ -372,22 +377,27 @@ DWORD GETINPUT_SUB CALLBACK CommandThread(void* data) {
 				/* add terminating zero */
 				buffer[dwRead] = '\0';
 
-				sscanf(command_string, "%s ", buffer);
-				if (strcmp(command_string, "begin_text_input") == 0) {
+				//sscanf(command_string, "%s ", buffer);
+				printf("BUFFER: %s\n", buffer);
+				/*if (strcmp(command_string, "begin_text_input") == 0) {
+					MessageBox(NULL, "Processed begintext", "Info", MB_OK);
 					inTextInput = true;
 					fflush(stdin);
 					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
 				}
 				else if (strcmp(command_string, "end_text_input") == 0) {
+					printf("Processed endtext\n");
 					inTextInput = false;
 					fflush(stdin);
 					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-				}
+				}*/
 			}
 		}
 
 		DisconnectNamedPipe(hPipe);
 	}
+
+	MessageBox(NULL, "Error!!!", "Error", MB_ICONERROR);
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void*) {

@@ -25,8 +25,11 @@ for /l %%c in (1,1,4) do (
 )
 
 if "!keyspressed!"=="-32-" (
-	set /a rasterx=10,rastery=18
-	set /a screenx=5,screeny=5
+	rem set /a rasterx=10,rastery=18
+	rem set /a screenx=5,screeny=5
+	<nul set/p"=begin_text_input" > \\.\pipe\GetinputCmd
+	set /p test=Type text: 
+	<nul set/p"=end_text_input" > \\.\pipe\GetinputCmd
 )
 
 goto :a

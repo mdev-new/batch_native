@@ -119,13 +119,14 @@ Software refers to any files related to batch_native.
 By using the files distributed to you in any way, you agree with this license.
 
 You have the permission to do pretty much whatever with the Software,
-with a few exceptions.
+under a few following conditions:
 a) Your forks including your changes are kept public.
 b) If you are reusing code and not forking the repo, give an attribution, both in the code and in the documentation (if it exists).
+
 Making an pull request to the original repository (https://github.com/mdev-new/batch_native) would be very much appreciated.
 
 The Software is provided "as is", without any warranty of any kind.
-In no event shall the authors or copyright holders be liable for any claim, damages or other liability.
+In no event shall the authors or copyright holders be liable for any claim, damage or other liability.
 
 We do reserve the right to alter this license at any time, without any prior
 notice and by continuing to use the Software, you automatically agree with the latest
