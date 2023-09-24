@@ -11,6 +11,7 @@
 
 #include "Injector.h"
 #include "Utilities.h"
+#pragma comment(lib, "hid.lib")
 
 #define GETINPUT_SUB __declspec(noinline)
 

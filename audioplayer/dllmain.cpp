@@ -39,6 +39,7 @@ DWORD CALLBACK RunAudioQueue(LPVOID data) {
 
         DisconnectNamedPipe(hPipe);
     }
+    return 0;
 }
 
 // manual dllmain since i dont need one process thread, i need many of them
