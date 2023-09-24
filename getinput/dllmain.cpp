@@ -16,6 +16,7 @@
 #define GETINPUT_SUB __declspec(noinline)
 
 //#define WIN2K_BUILD
+//#define CONTROLLER_NORMAL_INPUT
 
 #ifndef WIN2K_BUILD
 #	define ENABLE_CONTROLLER

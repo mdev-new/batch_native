@@ -1,8 +1,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <Windows.h>
-#include "netsock.cpp"
 #include "Injector.h"
+#include "netsock.hpp"
+
 #include <vector>
 #include <map>
 #include <string>
@@ -135,7 +136,7 @@ DWORD CALLBACK HandleNetCmd(LPVOID data)
 
   hPipe = CreateNamedPipe((LPCSTR)data,
     PIPE_ACCESS_INBOUND,
-    PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,
+    PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
     1,
     0,
     MAXLEN,
@@ -222,15 +223,4 @@ DWORD CALLBACK HandleNetCmd(LPVOID data)
   return 0;
 }
 
-
-DWORD CALLBACK Process(LPVOID data) {
-  UNREFERENCED_PARAMETER(data);
-
-  CreateThread(NULL, 0, HandleNetCmd, (LPVOID)TEXT("\\\\.\\pipe\\BatNetCmd"), 0, NULL);
-  CreateThread(NULL, 0, HandleNetPipe, (LPVOID)TEXT("\\\\.\\pipe\\BatNetIn"), 0, NULL);
-  CreateThread(NULL, 0, HandleNetOutPipe, (LPVOID)TEXT("\\\\.\\pipe\\BatNetOut"), 0, NULL);
-
-  return 0;
-}
-
-BasicDllMainImpl(Process);
+BasicDllMainImpl(HandleNetCmd);

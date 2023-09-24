@@ -166,6 +166,7 @@
     <ClCompile Include="netsock.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="netsock.hpp" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
