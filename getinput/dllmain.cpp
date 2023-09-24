@@ -130,6 +130,7 @@ controller_value ctrl_values[] = {
 	{ 0x8000, "btn_y" }
 };
 
+// too lazy to concat strings
 const char* ControllerEnvNames[] = {
 	"controller1_ltrig",
 	"controller1_rtrig",
@@ -235,10 +236,10 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	HANDLE hStdIn =  GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	DWORD modeIn, modeOut;
+	DWORD modeIn, modeOut, inputModeRead;
 
 #ifndef WIN2K_BUILD
-	modeIn = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE | ENABLE_LINE_INPUT);
+	modeIn = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
 	modeOut = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
 #else
 #	ifndef ENABLE_EXTENDED_FLAGS
@@ -249,9 +250,17 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	modeOut = 0;
 #endif
 
-	DWORD textInputMode = modeIn | ENABLE_LINE_INPUT;
+	DWORD textInputMode = modeIn | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT;
+
+	DWORD partial_cmdInMode = ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT;
 
 	while (1) {
+		GetConsoleMode(hStdIn, &inputModeRead);
+		if (inputModeRead & partial_cmdInMode) {
+			inTextInput = true;
+		}
+		else { inTextInput = false; }
+
 		SetConsoleMode(hStdIn, inTextInput ? textInputMode : modeIn);
 		SetConsoleMode(hStdOut, modeOut);
 
@@ -270,12 +279,12 @@ void MouseEventProc(MOUSE_EVENT_RECORD& record) {
 
 	switch (record.dwEventFlags) {
 	case MOUSE_MOVED: {
-		int lmx = 0, lmy = 0;
+		int lmx = getenvnum("limitMouseX"), lmy = getenvnum("limitMouseY");
 
 		int mouseX = record.dwMousePosition.X + 1;
 		int mouseY = record.dwMousePosition.Y + 1;
-		if (lmx && mouseX > (lmx = getenvnum("limitMouseX"))) mouseX = lmx;
-		if (lmy && mouseY > (lmy = getenvnum("limitMouseY"))) mouseY = lmy;
+		if (lmx && mouseX > lmx) mouseX = lmx;
+		if (lmy && mouseY > lmy) mouseY = lmy;
 
 		ENV("mousexpos", itoa_(mouseX));
 		ENV("mouseypos", itoa_(mouseY));
@@ -353,53 +362,6 @@ void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	return;
 }
 
-// TODO DEBUG
-#define MAXLEN 512
-DWORD GETINPUT_SUB CALLBACK CommandThread(void* data) {
-	HANDLE hPipe;
-	DWORD dwRead;
-
-	char buffer[MAXLEN] = { 0 };
-	char command_string[128] = { 0 };
-
-	hPipe = CreateNamedPipe(TEXT("\\\\.\\pipe\\GetinputCmd"),
-		PIPE_ACCESS_INBOUND,
-		PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, // | FILE_FLAG_FIRST_PIPE_INSTANCE,
-		1,
-		0,
-		MAXLEN,
-		NMPWAIT_USE_DEFAULT_WAIT,
-		NULL);
-
-	while (hPipe != INVALID_HANDLE_VALUE) {
-		if (ConnectNamedPipe(hPipe, NULL) != FALSE) {   // wait for someone to connect to the pipe
-			while (ReadFile(hPipe, buffer, MAXLEN - 1, &dwRead, NULL) != FALSE) {
-				/* add terminating zero */
-				buffer[dwRead] = '\0';
-
-				//sscanf(command_string, "%s ", buffer);
-				printf("BUFFER: %s\n", buffer);
-				/*if (strcmp(command_string, "begin_text_input") == 0) {
-					MessageBox(NULL, "Processed begintext", "Info", MB_OK);
-					inTextInput = true;
-					fflush(stdin);
-					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-				}
-				else if (strcmp(command_string, "end_text_input") == 0) {
-					printf("Processed endtext\n");
-					inTextInput = false;
-					fflush(stdin);
-					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-				}*/
-			}
-		}
-
-		DisconnectNamedPipe(hPipe);
-	}
-
-	MessageBox(NULL, "Error!!!", "Error", MB_ICONERROR);
-}
-
 DWORD GETINPUT_SUB CALLBACK Process(void*) {
 	ENV("wheeldelta", "0");
 	ENV("mousexpos", "0");
@@ -447,7 +409,6 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 
 	HANDLE hModeThread    = CreateThread(NULL, 0, ModeThread    , NULL, 0, NULL);
 	HANDLE hReadThread    = CreateThread(NULL, 0, MousePosThread, NULL, 0, NULL);
-	HANDLE hCommandThread = CreateThread(NULL, 0, CommandThread , NULL, 0, NULL);
 
 	unsigned __int64 begin, took;
 
