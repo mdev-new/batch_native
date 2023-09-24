@@ -36,6 +36,9 @@ inline int _max(int a, int b) {
 
 std::atomic_bool inTextInput = false;
 
+bool inFocus = true;
+volatile int sleep_time = 1000;
+
 // i was way too lazy to check for values individually, so this was created
 // this technically disallows key code 0xFF in some cases but once that becomes a problem
 // i'll a) not care or b) not be maintaing this or c) will solve it (last resort)
@@ -130,6 +133,8 @@ controller_value ctrl_values[] = {
 	{ 0x8000, "btn_y" }
 };
 
+#ifndef CONTROLLER_NORMAL_INPUT
+
 // too lazy to concat strings
 const char* ControllerEnvNames[] = {
 	"controller1_ltrig",
@@ -158,6 +163,15 @@ const char* ControllerEnvNames[] = {
 	"controller4_rthumby"
 };
 
+const char* ControllerBtnEnvNames[] = {
+	"controller1_btns",
+	"controller2_btns",
+	"controller3_btns",
+	"controller4_btns"
+};
+
+#endif
+
 typedef struct _vec2i {
 	int x, y;
 } vec2i;
@@ -179,6 +193,7 @@ vec2i process_stick(vec2i axes, short deadzone) {
 VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 	static char buffer[256] = { 0 };
 	static char varName[16] = "controller";
+
 	XINPUT_STATE state;
 	DWORD dwResult, size;
 
@@ -186,8 +201,10 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
 		dwResult = XInputGetState(i, &state);
 
+#ifdef CONTROLLER_NORMAL_INPUT
 		varName[10] = '0' + (i + 1);
-
+#endif
+		 
 		if (dwResult == ERROR_SUCCESS) { /* controller is connected */
 			ZeroMemory(buffer, sizeof buffer);
 
@@ -207,13 +224,38 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 // YESHIS INSANE, NOT PRETTY FUCKERY BEGINS HERE
 // I DONT WANT TO DO THIS
 
-		ENV(ControllerEnvNames[i * 6 + 0], itoa_(state.Gamepad.bLeftTrigger));
-		ENV(ControllerEnvNames[i * 6 + 1], itoa_(state.Gamepad.bRightTrigger));
-		ENV(ControllerEnvNames[i * 6 + 2], itoa_(left_stick.x));
-		ENV(ControllerEnvNames[i * 6 + 3], itoa_(left_stick.y));
-		ENV(ControllerEnvNames[i * 6 + 4], itoa_(right_stick.x));
-		ENV(ControllerEnvNames[i * 6 + 5], itoa_(right_stick.y));
+			ENV(ControllerEnvNames[i * 6 + 0], itoa_(state.Gamepad.bLeftTrigger));
+			ENV(ControllerEnvNames[i * 6 + 1], itoa_(state.Gamepad.bRightTrigger));
+			ENV(ControllerEnvNames[i * 6 + 2], itoa_(left_stick.x));
+			ENV(ControllerEnvNames[i * 6 + 3], itoa_(left_stick.y));
+			ENV(ControllerEnvNames[i * 6 + 4], itoa_(right_stick.x));
+			ENV(ControllerEnvNames[i * 6 + 5], itoa_(right_stick.y));
 
+#endif
+
+			int result;
+			for (WORD var = 0; var < 14; var++) {
+				if (result = (state.Gamepad.wButtons & ctrl_values[var].bitmask)) {
+					if (
+#ifdef CONTROLLER_NORMAL_INPUT
+						(size != origSize) &&
+#endif
+					result) {
+						buffer[size++] = ',';
+					}
+
+#ifdef CONTROLLER_NORMAL_INPUT
+					size += sprintf(buffer + size, "%s", ctrl_values[var].str);
+#else
+					sprintf(buffer + size, "%s", ctrl_values[var].str);
+#endif
+				}
+			}
+
+#ifdef CONTROLLER_NORMAL_INPUT
+			SetEnvironmentVariable(varName, buffer);
+#else
+			SetEnvironmentVariable(ControllerBtnEnvNames[i], buffer);
 #endif
 
 		} else {
@@ -223,10 +265,6 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 }
 
 #endif
-
-bool inFocus = true;
-volatile int sleep_time = 1000;
-
 
 DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	// i don't like this function. at all.

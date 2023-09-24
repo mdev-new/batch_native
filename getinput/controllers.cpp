@@ -659,7 +659,7 @@ const char* getInputName(Joysticks joysticks, unsigned int joystickIndex, unsign
 	}
 }
 
-int main()
+DWORD CALLBACK InitControllers(void *)
 {
 	Joysticks joysticks = createJoysticks();
 	while (1)

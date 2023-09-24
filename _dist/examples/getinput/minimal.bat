@@ -12,7 +12,7 @@ echo Variables are displayed in the title bar
 echo The format is: click mousexpos mouseypos wheeldelta ; keyspressed ; controller1 ; controller2 ; controller3 ; controller4
 
 :a
-title !click! !mousexpos! !mouseypos! !wheeldelta! ; !keyspressed! ; !controller1! ; !controller2! ; !controller3! ; !controller4!
+title !click! !mousexpos! !mouseypos! !wheeldelta! ; !keyspressed! ; !controller1_btns! ; !controller2! ; !controller3! ; !controller4!
 
 if "!keyspressed!"=="-32-" (
 	rem set /a rasterx=10,rastery=18
