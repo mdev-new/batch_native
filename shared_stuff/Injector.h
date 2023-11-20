@@ -12,6 +12,13 @@
 
 volatile HMODULE hDll = NULL;
 
+#ifndef INJECTOR_EXIT_ROUTINE_EXISTS
+#define INJECTOR_EXIT_ROUTINE_EXISTS
+void DllUnloadRoutine(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
+	return;
+}
+#endif
+
 #define BasicDllMainImpl(ThreadProcName) \
 NOMANGLE __declspec(dllexport) BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {\
 	hDll = hInst;\
@@ -23,6 +30,9 @@ NOMANGLE __declspec(dllexport) BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD dwRe
 	if (dwReason == DLL_PROCESS_ATTACH) {\
 		DisableThreadLibraryCalls(hInst);\
 		CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadProcName, NULL, 0, NULL);\
+	} else if(dwReason == DLL_PROCESS_DETACH) {\
+		DllUnloadRoutine(hInst, dwReason, lpReserved);\
+		return TRUE;\
 	}\
 	return TRUE;\
 }

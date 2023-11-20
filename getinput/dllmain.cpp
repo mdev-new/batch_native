@@ -1,3 +1,10 @@
+// this code runs on hopes and dreams.
+// it was written over the course of 3 years with very varying setups.
+// and under varying conditions.
+// do not learn from this, nor copy from this.
+// this code is a spaghettified mess.
+// just the sheer count of #ifdefs talks for itself.
+
 #define WIN32_LEAN_AND_MEAN
 #define STRICT
 #include <windows.h>
@@ -5,9 +12,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <atomic>
-#include <thread>
 #include <timeapi.h>
+
+#define YESHI
+
+#define INJECTOR_EXIT_ROUTINE_EXISTS
+
+HHOOK keyboardLowLevelHook = NULL;
+
+void DllUnloadRoutine(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved) {
+	if(keyboardLowLevelHook != NULL) {
+		UnhookWindowsHookEx( keyboardLowLevelHook );
+	}
+}
 
 #include "Injector.h"
 #include "Utilities.h"
@@ -18,6 +35,16 @@
 
 #ifndef WIN2K_BUILD
 #	define ENABLE_CONTROLLER
+
+#	include <atomic>
+#	include <thread>
+
+using std::atomic_bool;
+
+#else
+// lets make it at least volatile
+#	define std::atomic_bool volatile bool
+
 #endif
 
 #ifdef ENABLE_CONTROLLER
@@ -34,10 +61,286 @@ inline int _max(int a, int b) {
 	return ((a > b) ? a : b);
 }
 
-std::atomic_bool inTextInput = false;
+atomic_bool inTextInput = false;
 
 bool inFocus = true;
 volatile int sleep_time = 1000;
+
+//https://stackoverflow.com/questions/7009080/detecting-full-screen-mode-in-windows
+bool isFullscreen(HWND windowHandle)
+{
+	MONITORINFO monitorInfo = { 0 };
+	monitorInfo.cbSize = sizeof(MONITORINFO);
+	GetMonitorInfo(MonitorFromWindow(windowHandle, MONITOR_DEFAULTTOPRIMARY), &monitorInfo);
+
+	RECT windowRect;
+	GetWindowRect(windowHandle, &windowRect);
+
+	return windowRect.left == monitorInfo.rcMonitor.left
+		&& windowRect.right == monitorInfo.rcMonitor.right
+		&& windowRect.top == monitorInfo.rcMonitor.top
+		&& windowRect.bottom == monitorInfo.rcMonitor.bottom;
+}
+
+const char *stringifiedVKs[] = {
+	"Undefined",
+	"Left mouse button",
+	"Right mouse button",
+	"Control-break processing",
+	"Middle mouse button",
+	"X1 mouse button",
+	"X2 mouse button",
+	"Reserved",
+	"BACKSPACE key",
+	"TAB key",
+	"Reserved",
+	"Reserved",
+	"CLEAR key",
+	"ENTER key",
+	"Unassigned",
+	"Unassigned",
+	"SHIFT key",
+	"CTRL key",
+	"ALT key",
+	"PAUSE key",
+	"CAPS LOCK key",
+	"IME Kana mode",
+	"IME Hangul mode",
+	"IME On",
+	"IME Junja mode",
+	"IME final mode",
+	"IME Hanja mode",
+	"IME Kanji mode",
+	"IME Off",
+	"ESC key",
+	"IME convert",
+	"IME nonconvert",
+	"IME accept",
+	"IME mode change request",
+	"SPACEBAR",
+	"PAGE UP key",
+	"PAGE DOWN key",
+	"END key",
+	"HOME key",
+	"LEFT ARROW key",
+	"UP ARROW key",
+	"RIGHT ARROW key",
+	"DOWN ARROW key",
+	"SELECT key",
+	"PRINT key",
+	"EXECUTE key",
+	"PRINT SCREEN key",
+	"INS key",
+	"DEL key",
+	"HELP key",
+	"0 key",
+	"1 key",
+	"2 key",
+	"3 key",
+	"4 key",
+	"5 key",
+	"6 key",
+	"7 key",
+	"8 key",
+	"9 key",
+	"Undefined",
+	"Undefined",
+	"Undefined",
+	"Undefined",
+	"Undefined",
+	"Undefined",
+	"Undefined",
+	"A key",
+	"B key",
+	"C key",
+	"D key",
+	"E key",
+	"F key",
+	"G key",
+	"H key",
+	"I key",
+	"J key",
+	"K key",
+	"L key",
+	"M key",
+	"N key",
+	"O key",
+	"P key",
+	"Q key",
+	"R key",
+	"S key",
+	"T key",
+	"U key",
+	"V key",
+	"W key",
+	"X key",
+	"Y key",
+	"Z key",
+	"Left Windows key",
+	"Right Windows key",
+	"Applications key",
+	"Reserved",
+	"Computer Sleep key",
+	"Numeric keypad 0 key",
+	"Numeric keypad 1 key",
+	"Numeric keypad 2 key",
+	"Numeric keypad 3 key",
+	"Numeric keypad 4 key",
+	"Numeric keypad 5 key",
+	"Numeric keypad 6 key",
+	"Numeric keypad 7 key",
+	"Numeric keypad 8 key",
+	"Numeric keypad 9 key",
+	"Multiply key",
+	"Add key",
+	"Separator key",
+	"Subtract key",
+	"Decimal key",
+	"Divide key",
+	"F1 key",
+	"F2 key",
+	"F3 key",
+	"F4 key",
+	"F5 key",
+	"F6 key",
+	"F7 key",
+	"F8 key",
+	"F9 key",
+	"F10 key",
+	"F11 key",
+	"F12 key",
+	"F13 key",
+	"F14 key",
+	"F15 key",
+	"F16 key",
+	"F17 key",
+	"F18 key",
+	"F19 key",
+	"F20 key",
+	"F21 key",
+	"F22 key",
+	"F23 key",
+	"F24 key",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"NUM LOCK key",
+	"SCROLL LOCK key",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Unassigned",
+	"Left SHIFT key",
+	"Right SHIFT key",
+	"Left CONTROL key",
+	"Right CONTROL key",
+	"Left ALT key",
+	"Right ALT key",
+	"Browser Back key",
+	"Browser Forward key",
+	"Browser Refresh key",
+	"Browser Stop key",
+	"Browser Search key",
+	"Browser Favorites key",
+	"Browser Start and Home key",
+	"Volume Mute key",
+	"Volume Down key",
+	"Volume Up key",
+	"Next Track key",
+	"Previous Track key",
+	"Stop Media key",
+	"Play/Pause Media key",
+	"Start Mail key",
+	"Select Media key",
+	"Start Application 1 key",
+	"Start Application 2 key",
+	"Reserved",
+	"Reserved",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the ;: key",
+	"For any country/region, the + key",
+	"For any country/region, the , key",
+	"For any country/region, the - key",
+	"For any country/region, the . key",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the /? key",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the `~ key",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the [{ key",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the \\| key",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the ]} key",
+	"Used for miscellaneous characters; it can vary by keyboard. For the US standard keyboard, the '\" key",
+	"Used for miscellaneous characters; it can vary by keyboard.",
+	"Reserved",
+	"OEM specific",
+	"The <> keys on the US standard keyboard, or the \\| key on the non-US 102-key keyboard",
+	"OEM specific",
+	"OEM specific",
+	"IME PROCESS key",
+	"OEM specific",
+	"Used to pass Unicode characters as if they were keystrokes. The VK_PACKET key is the low word of a 32-bit Virtual Key value used for non-keyboard input methods. For more information, see Remark in KEYBDINPUT, SendInput, WM_KEYDOWN, and WM_KEYUP",
+	"Unassigned",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"OEM specific",
+	"Attn key",
+	"CrSel key",
+	"ExSel key",
+	"Erase EOF key",
+	"Play key",
+	"Zoom key",
+	"Reserved",
+	"PA1 key",
+	"Clear key",
+};
 
 // i was way too lazy to check for values individually, so this was created
 // this technically disallows key code 0xFF in some cases but once that becomes a problem
@@ -67,10 +370,11 @@ VOID GETINPUT_SUB process_keys() {
 
 	// 104 (# of keys on a standard keyboard) * 4 (max amount of chars emmited per key (-123)) + 1 (ending dash)
 	static char buffer[104 * 4 + 1];
+	static char buffer1[0xff * 0xff + 1];
 
 	int isAnyKeyDown = 0, actionHappened = 0;
 	BOOL state = 0;
-	WORD idx = 1;
+	WORD idx = 1, idx2 = 1;
 
 	for (int i = 3; i < 0x100; ++i) {
 		state = GetAsyncKeyState(i);
@@ -95,7 +399,9 @@ VOID GETINPUT_SUB process_keys() {
 	}
 
 	ZeroMemory(buffer, sizeof(buffer));
+	ZeroMemory(buffer1, sizeof(buffer1));
 	buffer[0] = '-';
+	buffer1[0] = '-';
 
 	for (int i = 0; i < 0x100; ++i) {
 		if (!pressed[i]) continue;
@@ -104,9 +410,11 @@ VOID GETINPUT_SUB process_keys() {
 		if (num == (BYTE)(-1)) continue;
 
 		idx += sprintf(buffer + idx, "%d-", num);
+		idx2 += sprintf(buffer1 + idx2, "%s-", stringifiedVKs[num]);
 	}
 
 	SetEnvironmentVariable("keyspressed", buffer);
+	SetEnvironmentVariable("keyspressed_str", buffer1);
 }
 
 #ifdef ENABLE_CONTROLLER
@@ -135,7 +443,7 @@ controller_value ctrl_values[] = {
 
 #ifndef CONTROLLER_NORMAL_INPUT
 
-// too lazy to concat strings
+// too lazy to concat strings :^)
 const char* ControllerEnvNames[] = {
 	"controller1_ltrig",
 	"controller1_rtrig",
@@ -195,7 +503,7 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 	static char varName[16] = "controller";
 
 	XINPUT_STATE state;
-	DWORD dwResult, size;
+	DWORD dwResult, size = 0;
 
 	for (char i = 0; i < 4; i++) {
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
@@ -223,6 +531,7 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 #else
 // YESHIS INSANE, NOT PRETTY FUCKERY BEGINS HERE
 // I DONT WANT TO DO THIS
+// I DONT WANNA SUPPORT ANOTHER INPUT MODE
 
 			ENV(ControllerEnvNames[i * 6 + 0], itoa_(state.Gamepad.bLeftTrigger));
 			ENV(ControllerEnvNames[i * 6 + 1], itoa_(state.Gamepad.bRightTrigger));
@@ -245,10 +554,9 @@ VOID GETINPUT_SUB PROCESS_CONTROLLER(float deadzone) {
 					}
 
 #ifdef CONTROLLER_NORMAL_INPUT
-					size += sprintf(buffer + size, "%s", ctrl_values[var].str);
-#else
-					sprintf(buffer + size, "%s", ctrl_values[var].str);
+					size +=
 #endif
+						sprintf(buffer + size, "%s", ctrl_values[var].str);
 				}
 			}
 
@@ -274,7 +582,7 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	HANDLE hStdIn =  GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	DWORD modeIn, modeOut, inputModeRead;
+	DWORD modeIn, modeOut, inputModeRead, inputModeRead2;
 
 #ifndef WIN2K_BUILD
 	modeIn = (ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~(ENABLE_QUICK_EDIT_MODE);
@@ -288,18 +596,17 @@ DWORD GETINPUT_SUB CALLBACK ModeThread(void* data) {
 	modeOut = 0;
 #endif
 
-	DWORD textInputMode = modeIn | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT;
+	//DWORD textInputMode = modeIn | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT;
 
-	DWORD partial_cmdInMode = ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT;
+	DWORD partial_cmdInMode = 143; // this seems to work
 
 	while (1) {
 		GetConsoleMode(hStdIn, &inputModeRead);
-		if (inputModeRead & partial_cmdInMode) {
-			inTextInput = true;
-		}
-		else { inTextInput = false; }
+		inputModeRead2 = inputModeRead;
+		
+		while (inTextInput = ((GetConsoleMode(hStdIn, &inputModeRead), inputModeRead) != inputModeRead2)) Sleep(1);
 
-		SetConsoleMode(hStdIn, inTextInput ? textInputMode : modeIn);
+		SetConsoleMode(hStdIn, modeIn);
 		SetConsoleMode(hStdOut, modeOut);
 
 #ifndef WIN2K_BUILD
@@ -347,12 +654,16 @@ void processEvnt(INPUT_RECORD ir) {
 	case KEY_EVENT: { // keys are processed async
 		if (inTextInput) {
 			DWORD w;
+			if (ir.Event.KeyEvent.wVirtualKeyCode == VK_RETURN) {
+				inTextInput = false;
+				break;
+			}
 			WriteConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &ir, 1, &w);
 		}
 		break;
 	}
 
-	case FOCUS_EVENT: // handled in main loop, this is quite buggy
+	case FOCUS_EVENT: // handled in main loop, from testing this is quite buggy sadly
 	case WINDOW_BUFFER_SIZE_EVENT:
 	case MENU_EVENT:
 	default:
@@ -361,10 +672,8 @@ void processEvnt(INPUT_RECORD ir) {
 }
 
 DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
-	// i don't like this, but if it means completely working mouse, i'll do it
-
 	INPUT_RECORD ir[64];
-	DWORD read, written;
+	DWORD read;
 
 	HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -379,12 +688,14 @@ DWORD GETINPUT_SUB CALLBACK MousePosThread(void* data) {
 	return 0;
 }
 
-// maybe doesn't work on subsequent calls
 void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	int screenx = getenvnum("screenx");
 	int screeny = getenvnum("screeny");
+	
+	int lastX = *lastScreenX;
+	int lastY = *lastScreenY;
 
-	if (screenx && screeny && (screenx != *lastScreenX) && (screeny != *lastScreenY)) {
+	if (screenx && screeny && (screenx != lastX) && (screeny != lastY)) {
 		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 		COORD consoleBufferSize = { screenx, screeny };
@@ -398,6 +709,21 @@ void resizeConsoleIfNeeded(int *lastScreenX, int *lastScreenY) {
 	}
 
 	return;
+}
+
+//https://cboard.cprogramming.com/windows-programming/69905-disable-alt-key-commands.html
+LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam )
+{
+	KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
+
+    if (nCode < 0 || nCode != HC_ACTION )
+		goto end;
+
+	if (p->vkCode == VK_RETURN && p->flags & LLKHF_ALTDOWN) return 1; //disable alt-enter
+	else if (p->vkCode == VK_F11) return 1;
+
+end:
+    return CallNextHookEx( keyboardLowLevelHook, nCode, wParam, lParam );
 }
 
 DWORD GETINPUT_SUB CALLBACK Process(void*) {
@@ -429,17 +755,23 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 		.FaceName = L"Terminal"
 	};
 
-	if (getenvnum("noresize") == 1) {
-		DWORD style = GetWindowLong(hCon, GWL_STYLE);
-		style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
-		SetWindowLong(hCon, GWL_STYLE, style);
-		DrawMenuBar(hCon);
-	}
-
 	WORD prevRasterX = -1;
 	WORD prevRasterY = -1;
 
 #endif
+
+	DWORD windowStyle = GetWindowLong(hCon, GWL_STYLE);
+	bool noresize = false, brutalNoResize = getenvnum_ex("brutalNoResize", 0) == 1;
+
+	if (noresize = (getenvnum("noresize") == 1)) {
+		windowStyle &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
+		SetWindowLong(hCon, GWL_STYLE, windowStyle);
+		DrawMenuBar(hCon);
+
+		if (brutalNoResize) {
+			keyboardLowLevelHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
+		}
+	}
 
 	timeBeginPeriod(1);
 
@@ -477,6 +809,19 @@ DWORD GETINPUT_SUB CALLBACK Process(void*) {
 			SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 			prevRasterX = rasterx;
 			prevRasterY = rastery;
+		}
+
+		if (noresize) {
+			SetWindowLong(hCon, GWL_STYLE, windowStyle);
+			DrawMenuBar(hCon);
+
+			if (!brutalNoResize && isFullscreen(hCon)) {
+				SendMessage(hCon, WM_SYSCOMMAND, SC_RESTORE, 0);
+
+#ifndef YESHI
+				resizeConsoleIfNeeded(lastscreenx, lastscreeny);
+#endif
+			}
 		}
 
 #endif

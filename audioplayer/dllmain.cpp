@@ -30,15 +30,28 @@ DWORD CALLBACK RunAudioQueue(LPVOID data) {
         if (ConnectNamedPipe(hPipe, NULL) != FALSE) {   // wait for someone to connect to the pipe
             while (ReadFile(hPipe, buffer.data(), MAXLEN - 1, &dwRead, NULL) != FALSE) {
                 /* add terminating zero */
-                buffer[dwRead] = '\0';
+				if(dwRead >= 1) {
+					buffer[dwRead-1] = '\0';
 
-                audio.SetFile(buffer);
-                snd.Play(audio);
+					if(strncmp(buffer, "play", 4) == 0) {
+						audio.SetFile(buffer+5);
+						snd.Play(audio);
+					}
+
+					if(strncmp(buffer, "stop", 4) == 0) {
+						snd.Stop();
+					}
+
+					if(strncmp(buffer, "pause", 5) == 0) {} // todo pause
+					if(strncmp(buffer, "resume", 6) == 0) {} // todo resume
+				}
             }
         }
 
         DisconnectNamedPipe(hPipe);
     }
+
+    return 0;
 }
 
 // manual dllmain since i dont need one process thread, i need many of them
@@ -54,10 +67,13 @@ extern "C" __declspec(dllexport) BOOL __stdcall DllMain(HINSTANCE hInst, DWORD d
     if (dwReason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(hInst);
 
-        CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ0"), 0, NULL);
         CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ1"), 0, NULL);
         CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ2"), 0, NULL);
         CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ3"), 0, NULL);
+        CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ4"), 0, NULL);
+        CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ5"), 0, NULL);
+        CreateThread(NULL, 0, RunAudioQueue, (LPVOID)TEXT("\\\\.\\pipe\\BatAudQ6"), 0, NULL);
+
     }
 
     return TRUE;

@@ -1,3 +1,5 @@
+// taken from some good man on github
+
 #include <stdio.h>
 #include <Windows.h>
 #include <Xinput.h>

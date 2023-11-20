@@ -198,7 +198,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="controllers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

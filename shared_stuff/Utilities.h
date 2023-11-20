@@ -3,6 +3,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdlib.h>
 
 char * itoa_(int i) {
 	static char buffer[21] = { 0 };

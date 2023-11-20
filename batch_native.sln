@@ -26,6 +26,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Položky řešení", "Polo�
 		_dist\batch_native.txt = _dist\batch_native.txt
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "report_conmode", "report_conmode\Project.vcxproj", "{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -81,6 +83,18 @@ Global
 		{36465235-492F-465C-9554-6113F3B1E850}.Release|x64.Build.0 = Release|x64
 		{36465235-492F-465C-9554-6113F3B1E850}.Release|x86.ActiveCfg = Release|Win32
 		{36465235-492F-465C-9554-6113F3B1E850}.Release|x86.Build.0 = Release|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Debug|Win32.Build.0 = Debug|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Debug|x64.ActiveCfg = Debug|x64
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Debug|x64.Build.0 = Debug|x64
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Debug|x86.ActiveCfg = Debug|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Debug|x86.Build.0 = Debug|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Release|Win32.ActiveCfg = Release|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Release|Win32.Build.0 = Release|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Release|x64.ActiveCfg = Release|x64
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Release|x64.Build.0 = Release|x64
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Release|x86.ActiveCfg = Release|Win32
+		{6979CFBE-D913-4637-B4EF-2DBFD3A3E6F8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
